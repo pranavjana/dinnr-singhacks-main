@@ -16,6 +16,9 @@ try:
 except ModuleNotFoundError:
     # Fall back to relative imports (running from backend directory)
     from core.config import settings
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Configure logging
 logger = logging.getLogger(__name__)
