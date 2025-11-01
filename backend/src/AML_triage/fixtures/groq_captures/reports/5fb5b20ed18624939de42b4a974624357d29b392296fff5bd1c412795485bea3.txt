@@ -1,0 +1,16 @@
+**Executive Summary**
+The case has been flagged with a decision of SUS, indicating a potential suspicious activity that requires further investigation. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case and escalate it to a Level 2 AML analyst for deeper analysis. The recommended action path involves creating a case, escalating it to Level 2, and requesting source-of-funds documentation from the customer. This approach will enable a comprehensive review of the case and ensure that all necessary steps are taken to mitigate potential risks.
+
+**Recommended Actions**
+* Create an investigation case (CREATE_CASE) to track the alert within the internal case management system, referencing the current trace ID and screening decision.
+* Escalate the case to a Level 2 AML analyst (ESCALATE_L2_AML) for deeper analysis, submitting a summary of detected patterns and open questions.
+* Request source-of-funds documentation (REQUEST_SOF_DOCS) from the customer to collect evidence on the origin of funds for the flagged transactions.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information and conduct a thorough analysis of the case. However, if the customer fails to respond or provides incomplete evidence, the case may need to be escalated further or additional actions taken.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the SUS decision indicates a potential suspicious activity that warrants further investigation. The recommended actions are designed to gather more information and assess the risk associated with the case.
+
+**Next Steps**
+The reviewer should monitor the case for the customer's response to the source-of-funds documentation request and follow up within 5 business days if no response is received. The reviewer should also verify that the case is properly updated in the case management system and that all necessary evidence is attached. Outstanding evidence includes the customer's response to the SOF request and any additional information that may be required to complete the investigation. The reviewer should schedule a follow-up review to assess the case status and determine if further actions are needed.

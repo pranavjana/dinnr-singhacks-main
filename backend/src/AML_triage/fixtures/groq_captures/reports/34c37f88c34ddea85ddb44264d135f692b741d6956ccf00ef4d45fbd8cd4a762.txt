@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID eab56506-477d-43b0-b3da-297c0981f2b1 has been flagged for further investigation due to a screening decision of SUS, indicating a potential risk that requires deeper analysis. The recommended action path involves creating an investigation case, escalating it to a Level 2 AML analyst for specialist review, and requesting source-of-funds documentation from the customer to clarify the origin of funds for the flagged transactions. These steps are necessary to ensure compliance with AML regulations and to mitigate potential risks.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for deeper analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines for prioritization.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information and conduct a thorough analysis of the case. However, if the customer fails to respond or provides incomplete evidence, the case may be flagged for further escalation.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS indicates a potential risk that requires further investigation. The recommended actions are designed to gather more information and assess the risk level.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request, and follow up within 5 business days if necessary. The reviewer should also verify that the case is properly tracked within the internal case management system and that all relevant evidence is attached. Outstanding evidence includes the customer's response to the source-of-funds documentation request and any additional information that may be required to complete the investigation.

@@ -11,7 +11,8 @@
       "Bash(curl:*)",
       "Bash(env)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

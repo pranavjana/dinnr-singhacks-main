@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     # CORS Configuration
     cors_origins: str = "http://localhost:3000,http://localhost:8000"
 
+    # Google Cloud Configuration
+    google_application_credentials: str = ""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

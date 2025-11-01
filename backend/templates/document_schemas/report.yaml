@@ -1,0 +1,109 @@
+# reports.yaml — validation template for analytical/operational reports
+
+_defaults: &defaults
+  min_words: 600
+  spelling_error_rate_max: 0.03
+  required_headers: []
+  optional_headers: []
+  header_order_strict: false
+  min_words_per_section: {}
+  allowed_formats: [pdf, docx, txt]
+  page_limits: { min: 2, max: 100 }
+  font_limits: { max_distinct_fonts: 6 }
+  spacing_rules:
+    max_double_space_ratio: 0.02
+    max_tabs: 30
+  metadata_requirements:
+    require_created_or_modified: true
+    forbid_future_dates: true
+
+_tables: &tables
+  table_requirements:
+    min_tables: 1
+    allow_images_of_tables: false   # prefer embedded text tables
+
+_images: &images
+  image_block_requirements:
+    allow_figures: true
+    caption_required: true
+    min_resolution: { width: 1000, height: 700 }
+
+# -------- Report types --------
+
+aml_investigation_report:
+  <<: *defaults
+  required_headers:
+    - Executive Summary
+    - Subject Profile
+    - Transaction Overview
+    - Red Flags & Findings
+    - Analysis & Rationale
+    - Recommendations
+    - Appendices
+  min_words_per_section:
+    Executive Summary: 120
+    Red Flags & Findings: 150
+    Analysis & Rationale: 150
+    Recommendations: 60
+  page_limits: { min: 4, max: 40 }
+  <<: *tables
+  <<: *images
+
+risk_assessment_report:
+  <<: *defaults
+  required_headers:
+    - Scope and Methodology
+    - Inherent Risk
+    - Controls Assessment
+    - Residual Risk
+    - Conclusion
+  min_words_per_section:
+    Scope and Methodology: 120
+    Inherent Risk: 120
+    Controls Assessment: 120
+    Residual Risk: 100
+  page_limits: { min: 3, max: 30 }
+  <<: *tables
+  <<: *images
+
+operational_periodic_report:
+  <<: *defaults
+  required_headers:
+    - Overview
+    - KPIs
+    - Incidents
+    - Actions Taken
+    - Next Steps
+  min_words: 500
+  page_limits: { min: 2, max: 25 }
+  <<: *tables
+  <<: *images
+
+board_pack_summary:
+  <<: *defaults
+  required_headers:
+    - Highlights
+    - Financial Summary
+    - Key Risks
+    - Decisions Required
+    - Appendix
+  min_words: 700
+  page_limits: { min: 3, max: 25 }
+  <<: *tables
+  <<: *images
+
+risk_overrides:
+  aml_investigation_report:
+    missing_section: 3
+    header_mismatch: 2
+    table_missing: 2
+    image_without_caption: 1
+  risk_assessment_report:
+    missing_section: 3
+    header_mismatch: 2
+  operational_periodic_report:
+    missing_section: 2
+    header_mismatch: 1
+  board_pack_summary:
+    missing_section: 3
+    header_mismatch: 2
