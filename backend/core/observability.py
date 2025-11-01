@@ -9,7 +9,12 @@ from typing import Any, Dict
 from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry, generate_latest
 from prometheus_client.openmetrics.exposition import CONTENT_TYPE_LATEST
 
-from backend.core.config import settings
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.config import settings
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.config import settings
 
 
 # Configure basic logging

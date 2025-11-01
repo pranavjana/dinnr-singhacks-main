@@ -11,17 +11,32 @@ from uuid import uuid4
 
 from langgraph.graph import StateGraph, END
 
-from backend.core.observability import get_logger
-from backend.core.config import settings
-from backend.agents.aml_monitoring.state_schemas import PaymentAnalysisState
-from backend.agents.aml_monitoring.rule_checker_agent import check_rules_node
-from backend.agents.aml_monitoring.verdict_router import calculate_verdict_node
-from backend.agents.aml_monitoring.risk_analyzer import run_risk_analysis
-from backend.models.query_params import QueryParameters
-from backend.models.transaction import TransactionRecord
-from backend.services.transaction_service import transaction_service
-from backend.services.rules_service import rules_service
-from backend.services.llm_client import grok_client
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.observability import get_logger
+    from backend.core.config import settings
+    from backend.agents.aml_monitoring.state_schemas import PaymentAnalysisState
+    from backend.agents.aml_monitoring.rule_checker_agent import check_rules_node
+    from backend.agents.aml_monitoring.verdict_router import calculate_verdict_node
+    from backend.agents.aml_monitoring.risk_analyzer import run_risk_analysis
+    from backend.models.query_params import QueryParameters
+    from backend.models.transaction import TransactionRecord
+    from backend.services.transaction_service import transaction_service
+    from backend.services.rules_service import rules_service
+    from backend.services.llm_client import grok_client
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.observability import get_logger
+    from core.config import settings
+    from agents.aml_monitoring.state_schemas import PaymentAnalysisState
+    from agents.aml_monitoring.rule_checker_agent import check_rules_node
+    from agents.aml_monitoring.verdict_router import calculate_verdict_node
+    from agents.aml_monitoring.risk_analyzer import run_risk_analysis
+    from models.query_params import QueryParameters
+    from models.transaction import TransactionRecord
+    from services.transaction_service import transaction_service
+    from services.rules_service import rules_service
+    from services.llm_client import grok_client
 
 logger = get_logger(__name__)
 

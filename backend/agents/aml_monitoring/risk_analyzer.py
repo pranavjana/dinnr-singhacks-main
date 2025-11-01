@@ -9,11 +9,20 @@ import logging
 from datetime import datetime
 
 from langgraph.graph import StateGraph, END
-from agents.aml_monitoring.states import RiskAnalysisState
-from services.llm_client import grok_client
-from models.transaction import TransactionRecord
-from models.analysis_result import AnalysisResult, FlaggedTransaction, IdentifiedPattern
-from models.rules import RulesData
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.agents.aml_monitoring.states import RiskAnalysisState
+    from backend.services.llm_client import grok_client
+    from backend.models.transaction import TransactionRecord
+    from backend.models.analysis_result import AnalysisResult, FlaggedTransaction, IdentifiedPattern
+    from backend.models.rules import RulesData
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from agents.aml_monitoring.states import RiskAnalysisState
+    from services.llm_client import grok_client
+    from models.transaction import TransactionRecord
+    from models.analysis_result import AnalysisResult, FlaggedTransaction, IdentifiedPattern
+    from models.rules import RulesData
 
 # Configure logging
 logger = logging.getLogger(__name__)

@@ -6,8 +6,14 @@ from typing import Dict, Any, Optional, List
 from uuid import UUID, uuid4
 from datetime import datetime
 
-from backend.core.observability import get_logger
-from backend.core.config import settings
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.observability import get_logger
+    from backend.core.config import settings
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.observability import get_logger
+    from core.config import settings
 
 logger = get_logger(__name__)
 
