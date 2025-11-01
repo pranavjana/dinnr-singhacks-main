@@ -1,0 +1,10 @@
+# Development extras for AML triage service
+-r requirements.txt
+
+# Tooling
+ipython
+pre-commit
+
+# Typing helpers
+types-PyYAML
+types-cachetools

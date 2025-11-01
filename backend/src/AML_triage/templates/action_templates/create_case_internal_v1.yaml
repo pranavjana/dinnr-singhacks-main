@@ -1,0 +1,23 @@
+template_id: create_case_internal_v1
+version: 1.0.0
+locale: en
+channel: INTERNAL
+purpose: Provide analysts with a case summary to open CaseWorks ticket
+when_to_use: Use when SUS or FAIL decision triggers follow-up investigation
+required_fields:
+  - decision
+  - rule_codes
+  - corridor
+playbook_steps:
+  - Copy decision rationale and supporting evidence hashes
+  - Populate CaseWorks fields using placeholders below
+  - Link any existing investigations via metadata.case_id if present
+compliance_notes: Ensure no customer PII beyond hashed identifiers is recorded
+rules:
+  - AML_COMPLEX
+  - STR_TRIGGER
+risk_levels:
+  - HIGH
+corridors: []
+fewshot_examples:
+  - "Decision SUS due to AML_COMPLEX; open CaseWorks ticket referencing evidence hashes."

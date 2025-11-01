@@ -1,0 +1,27 @@
+# Canonical field aliases for ScreeningResult payloads
+schema_version:
+  - schemaVersion
+decision:
+  - screening_decision
+rule_codes:
+  - ruleCodes
+  - rules_triggered
+corridor:
+  - transfer_corridor
+corridor.origin_country:
+  - originCountry
+  - origin_country_code
+corridor.destination_country:
+  - destinationCountry
+  - destination_country_code
+corridor.channel:
+  - transfer_channel
+corridor.currency:
+  - transfer_currency
+amount:
+  - transfer_amount
+behavioural_patterns:
+  - behavior_patterns
+  - behaviouralPatterns
+evidence:
+  - supporting_evidence
