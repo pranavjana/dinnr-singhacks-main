@@ -156,6 +156,16 @@ except Exception as e:
     logger.warning(f"Could not load rule extraction endpoints: {e}")
     logger.info("Continuing without rule extraction endpoints...")
 
+<<<<<<< HEAD
+# Transaction monitoring endpoints (from src/api)
+try:
+    from api.transactions import router as transactions_router
+    app.include_router(transactions_router, tags=["Transactions"])
+    logger.info("Transaction monitoring endpoints registered successfully")
+except Exception as e:
+    logger.warning(f"Could not load transaction monitoring endpoints: {e}")
+    logger.info("Continuing without transaction monitoring endpoints...")
+=======
 # Document analysis endpoints
 try:
     try:
@@ -173,15 +183,7 @@ except Exception as e:
     logger.error(f"Failed to load document analysis endpoints: {e}")
     import traceback
     traceback.print_exc()
-
-# Transaction monitoring endpoints (from src/api)
-try:
-    from api.transactions import router as transactions_router
-    app.include_router(transactions_router, tags=["Transactions"])
-    logger.info("Transaction monitoring endpoints registered successfully")
-except Exception as e:
-    logger.warning(f"Could not load transaction monitoring endpoints: {e}")
-    logger.info("Continuing without transaction monitoring endpoints...")
+>>>>>>> 3e21cea (part 2 functionality full)
 
 
 if __name__ == "__main__":
