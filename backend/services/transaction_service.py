@@ -10,9 +10,9 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 
-from models.query_params import QueryParameters
-from models.transaction import TransactionRecord, PaymentHistory
-from config import settings
+from backend.models.query_params import QueryParameters
+from backend.models.transaction import TransactionRecord, PaymentHistory
+from backend.core.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class TransactionService:
         Args:
             csv_path: Path to CSV file. Defaults to settings.csv_file_path
         """
-        self.csv_path = csv_path or settings.csv_file_path
+        self.csv_path = csv_path or settings.transactions_csv_path
         self._df: pd.DataFrame | None = None
 
     def _load_csv(self) -> pd.DataFrame:
@@ -115,10 +115,24 @@ class TransactionService:
             )
             logger.debug(f"Filter: beneficiary_account={params.beneficiary_account}")
 
-        # Combine with OR logic
-        combined_filter = filters[0]
-        for f in filters[1:]:
-            combined_filter = combined_filter | f
+        if params.booking_datetime:
+            try:
+                target_dt = pd.to_datetime(params.booking_datetime)
+                filters.append(df["booking_datetime"] == target_dt)
+                logger.debug(f"Filter: booking_datetime={target_dt}")
+            except Exception as exc:
+                logger.warning(
+                    "Invalid booking_datetime filter provided: %s (error=%s)",
+                    params.booking_datetime,
+                    str(exc)
+                )
+
+        if not filters:
+            combined_filter = df.index == df.index  # all True
+        else:
+            combined_filter = filters[0]
+            for f in filters[1:]:
+                combined_filter = combined_filter | f
 
         # Apply filter and deduplicate by transaction_id
         result_df = df[combined_filter].drop_duplicates(subset=["transaction_id"])
@@ -163,6 +177,21 @@ class TransactionService:
         )
 
         return payment_history
+
+    def get_random_transaction(self) -> TransactionRecord:
+        """Retrieve a single random transaction from the dataset."""
+        df = self._load_csv()
+        if df.empty:
+            raise ValueError("Transaction dataset is empty")
+
+        row = df.sample(n=1).iloc[0]
+        record_dict = {
+            k: (None if pd.isna(v) else v)
+            for k, v in row.to_dict().items()
+        }
+
+        transaction = TransactionRecord(**record_dict)
+        return transaction
 
 
 # Global service instance

@@ -33,6 +33,11 @@ class QueryParameters(BaseModel):
         description="Beneficiary account number (case-insensitive exact match)",
         example="GB88KUDJ48147748190437",
     )
+    booking_datetime: str | None = Field(
+        None,
+        description="Booking datetime ISO8601 (exact match)",
+        example="2025-10-10T10:24:43",
+    )
 
     @property
     def has_filters(self) -> bool:
@@ -42,6 +47,7 @@ class QueryParameters(BaseModel):
             self.originator_account,
             self.beneficiary_name,
             self.beneficiary_account,
+            self.booking_datetime,
         ])
 
     model_config = {

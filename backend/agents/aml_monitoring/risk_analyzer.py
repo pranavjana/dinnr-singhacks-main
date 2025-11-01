@@ -34,6 +34,19 @@ def format_data(state: RiskAnalysisState) -> RiskAnalysisState:
     logger.info(f"Formatting {len(state['transactions'])} transactions for LLM analysis")
 
     transactions = state["transactions"]
+    compliance_rules = state.get("compliance_rules") or []
+    current_payment = state.get("current_payment")
+
+    compliance_rules_json = json.dumps(compliance_rules, indent=2, default=str) if compliance_rules else "[]"
+    current_payment_json = json.dumps(current_payment, indent=2, default=str) if current_payment else None
+    current_payment_section = ""
+    if current_payment_json:
+        current_payment_section = (
+            "## Current Payment Under Review\n\n"
+            "```json\n"
+            f"{current_payment_json}\n"
+            "```\n"
+        )
 
     # Build structured prompt with analysis instructions
     prompt = f"""# AML Risk Analysis Task
@@ -54,6 +67,23 @@ Identify suspicious patterns and flag high-risk transactions based on:
 8. **KYC/EDD Issues**: Expired KYC, missing EDD when required, undocumented source of wealth
 9. **FX Anomalies**: Unusual FX spreads or rates
 10. **Product Suitability**: Complex products for low-risk clients, mismatches
+
+## Fields To Examine
+
+For each record, pay special attention to:
+- originator_name, originator_account, beneficiary_name, beneficiary_account, booking_datetime
+- amount, currency, channel, product_type, swift_mt, purpose_code, narrative
+- sanctions_screening, edd_required, edd_performed, str_filed_datetime
+- client_risk_profile, customer_risk_profile (derive from customer_risk_rating if missing)
+
+## Active Compliance Rules
+
+Reference the following regulatory rules during your assessment:
+```json
+{compliance_rules_json}
+```
+
+{current_payment_section}
 
 ## Transaction Data (JSON)
 
@@ -489,7 +519,10 @@ def create_risk_analysis_graph() -> StateGraph:
 
 
 async def run_risk_analysis(
-    transactions: list[TransactionRecord], rules_data: RulesData | None = None
+    transactions: list[TransactionRecord],
+    rules_data: RulesData | None = None,
+    compliance_rules: list[dict] | None = None,
+    current_payment: dict | None = None,
 ) -> AnalysisResult:
     """
     Execute risk analysis workflow on transaction list.
@@ -499,6 +532,8 @@ async def run_risk_analysis(
     Args:
         transactions: List of TransactionRecord objects to analyze
         rules_data: Optional regulatory rules for validation (FR-012). If None, rules validation is skipped.
+        compliance_rules: Optional list of active compliance rules (JSON-serialisable) to include in LLM prompt.
+        current_payment: Optional current payment context dict for the LLM.
 
     Returns:
         AnalysisResult with risk scores, flagged transactions, patterns, and summary
@@ -513,6 +548,8 @@ async def run_risk_analysis(
         f"Starting risk analysis workflow for {len(transactions)} transactions"
         + (f" with rules validation" if rules_data else " (no rules validation)")
     )
+    if compliance_rules:
+        logger.info("Including %s compliance rules in LLM prompt", len(compliance_rules))
 
     # Convert TransactionRecords to dicts for LLM
     transaction_dicts = [t.model_dump(mode="json") for t in transactions]
@@ -524,6 +561,8 @@ async def run_risk_analysis(
     initial_state: RiskAnalysisState = {
         "transactions": transaction_dicts,
         "rules_data": rules_dict,
+        "compliance_rules": compliance_rules or [],
+        "current_payment": current_payment,
         "formatted_prompt": None,
         "llm_raw_response": None,
         "analysis_result": None,
