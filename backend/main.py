@@ -102,7 +102,6 @@ async def metrics():
         content=get_metrics(),
         media_type=get_metrics_content_type()
     )
-app.include_router(payment_analysis.router, tags=["Payment Analysis"])
 
 
 @app.get("/")

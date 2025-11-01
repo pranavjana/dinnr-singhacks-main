@@ -20,8 +20,6 @@ except ModuleNotFoundError:
     from models.query_params import QueryParameters
     from models.transaction import TransactionRecord, PaymentHistory
     from core.config import settings
-from models.query_params import QueryParameters
-from models.transaction import TransactionRecord, PaymentHistory
 
 # Configure logging
 logger = logging.getLogger(__name__)

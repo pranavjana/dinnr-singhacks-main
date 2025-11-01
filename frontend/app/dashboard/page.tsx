@@ -26,19 +26,28 @@ import { useState } from "react"
 import { ChevronDown } from "lucide-react"
 
 interface Verdict {
-  payment_id: string
-  trace_id: string
+  payment_id?: string
+  trace_id?: string
   verdict: 'pass' | 'suspicious' | 'fail'
   assigned_team: string
   risk_score: number
-  rule_score: number
-  pattern_score: number
+  rule_score?: number
+  pattern_score?: number
   llm_risk_score?: number
-  justification: string
-  triggered_rules: any[]
-  detected_patterns: any[]
+  justification?: string
+  triggered_rules?: any[]
+  detected_patterns?: any[]
   llm_flagged_transactions?: any[]
   llm_patterns?: any[]
+  narrative_summary?: string
+  rule_references?: string[]
+  notable_transactions?: any[]
+  recommended_actions?: string[]
+}
+
+interface TriageResult {
+  screening_result: any
+  triage_plan: string
 }
 
 interface Transaction {
@@ -50,7 +59,9 @@ interface Transaction {
   timestamp?: string
   status?: string
   verdict?: Verdict
+  triage?: TriageResult
   isAnalyzing?: boolean
+  isTriaging?: boolean
   [key: string]: any
 }
 
@@ -93,14 +104,59 @@ export default function Page() {
           if (analyzeResponse.ok) {
             const verdict = await analyzeResponse.json()
 
-            // Update the specific transaction with verdict
+            // Update the specific transaction with verdict and mark as triaging
             setTransactions(prev =>
               prev.map((txn, idx) =>
                 idx === i
-                  ? { ...txn, verdict, isAnalyzing: false }
+                  ? { ...txn, verdict, isAnalyzing: false, isTriaging: true }
                   : txn
               )
             )
+
+            // Call triage endpoint
+            try {
+              const triageResponse = await fetch('/api/v1/payments/triage', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  payment: fetchedTransactions[i],
+                  analysis: verdict,
+                }),
+              })
+
+              if (triageResponse.ok) {
+                const triageResult = await triageResponse.json()
+
+                // Update with triage result
+                setTransactions(prev =>
+                  prev.map((txn, idx) =>
+                    idx === i
+                      ? { ...txn, triage: triageResult, isTriaging: false }
+                      : txn
+                  )
+                )
+              } else {
+                // Mark triage as failed
+                setTransactions(prev =>
+                  prev.map((txn, idx) =>
+                    idx === i
+                      ? { ...txn, isTriaging: false }
+                      : txn
+                  )
+                )
+              }
+            } catch (error) {
+              console.error(`Error triaging transaction ${i}:`, error)
+              setTransactions(prev =>
+                prev.map((txn, idx) =>
+                  idx === i
+                    ? { ...txn, isTriaging: false }
+                    : txn
+                )
+              )
+            }
           } else {
             // Mark as failed analysis
             setTransactions(prev =>
@@ -250,6 +306,11 @@ export default function Page() {
                                     Analyzing...
                                   </span>
                                 )}
+                                {transaction.isTriaging && (
+                                  <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+                                    Triaging...
+                                  </span>
+                                )}
                                 {transaction.verdict && transaction.verdict.verdict && (
                                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getRiskBadgeColor(transaction.verdict.verdict)}`}>
                                     {transaction.verdict.verdict.toUpperCase()}
@@ -268,7 +329,7 @@ export default function Page() {
                               </span>
                               {transaction.verdict && (
                                 <span className="text-xs text-muted-foreground">
-                                  Score: {transaction.verdict.risk_score.toFixed(1)}
+                                  Score: {transaction.verdict.risk_score?.toFixed(1) || 'N/A'}
                                 </span>
                               )}
                             </div>
@@ -293,12 +354,14 @@ export default function Page() {
                                     </div>
                                     <div>
                                       <span className="text-muted-foreground">Risk Score:</span>
-                                      <p className="font-medium">{transaction.verdict.risk_score.toFixed(2)}</p>
+                                      <p className="font-medium">{transaction.verdict.risk_score?.toFixed(2) || 'N/A'}</p>
                                     </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Rule Score:</span>
-                                      <p className="font-medium">{transaction.verdict.rule_score.toFixed(2)}</p>
-                                    </div>
+                                    {transaction.verdict.rule_score !== undefined && (
+                                      <div>
+                                        <span className="text-muted-foreground">Rule Score:</span>
+                                        <p className="font-medium">{transaction.verdict.rule_score.toFixed(2)}</p>
+                                      </div>
+                                    )}
                                   </div>
                                   {transaction.verdict.justification && (
                                     <div>
@@ -308,14 +371,50 @@ export default function Page() {
                                   )}
                                   {transaction.verdict.triggered_rules && transaction.verdict.triggered_rules.length > 0 && (
                                     <div>
-                                      <span className="text-muted-foreground">Triggered Rules ({transaction.verdict.triggered_rules.length}):</span>
-                                      <ul className="list-disc list-inside text-sm mt-1">
+                                      <span className="text-muted-foreground">Detected Patterns ({transaction.verdict.triggered_rules.length}):</span>
+                                      <ul className="list-disc list-inside text-sm mt-1 space-y-1">
                                         {transaction.verdict.triggered_rules.map((rule: any, i) => (
-                                          <li key={i} className="font-medium">{rule.rule_name || rule.name || `Rule ${i + 1}`}</li>
+                                          <li key={i} className="font-medium">
+                                            <span className="font-semibold text-red-600">{rule.pattern_type || rule.rule_name || rule.name || `Pattern ${i + 1}`}</span>
+                                            {rule.description && <span className="text-muted-foreground">: {rule.description}</span>}
+                                            {rule.severity && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">{rule.severity}</span>}
+                                          </li>
                                         ))}
                                       </ul>
                                     </div>
                                   )}
+                                </div>
+                              )}
+
+                              {/* AML Triage Section */}
+                              {transaction.triage && (
+                                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 space-y-3 border-2 border-blue-200 dark:border-blue-800">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">AML Triage Plan</h4>
+                                    <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full font-semibold">
+                                      {transaction.triage.screening_result.decision}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {transaction.triage.screening_result.action_ids && transaction.triage.screening_result.action_ids.length > 0 && (
+                                      <div>
+                                        <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Recommended Actions:</span>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {transaction.triage.screening_result.action_ids.map((action: string, i: number) => (
+                                            <span key={i} className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
+                                              {action.replace('action_', '').replace(/_/g, ' ')}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div>
+                                      <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Triage Plan:</span>
+                                      <p className="text-sm mt-1 text-blue-900 dark:text-blue-100 whitespace-pre-wrap font-medium">
+                                        {transaction.triage.triage_plan}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
 
@@ -325,16 +424,8 @@ export default function Page() {
                                   <p className="font-medium">{transaction.product_type || transaction.category || 'N/A'}</p>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground">Date:</span>
-                                  <p className="font-medium">{transaction.booking_datetime || transaction.timestamp || 'N/A'}</p>
-                                </div>
-                                <div>
                                   <span className="text-muted-foreground">Beneficiary:</span>
                                   <p className="font-medium">{transaction.beneficiary_name || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Status:</span>
-                                  <p className="font-medium capitalize">{transaction.status || 'N/A'}</p>
                                 </div>
                               </div>
 
@@ -352,7 +443,7 @@ export default function Page() {
                                 <CollapsibleContent className="mt-4">
                                   <div className="grid grid-cols-2 gap-3 text-sm">
                                     {Object.entries(transaction).map(([key, value]) => {
-                                      if (['merchant', 'amount', 'currency', 'category', 'timestamp', 'originator_name', 'product_type', 'booking_datetime', 'beneficiary_name', 'status', 'verdict', 'isAnalyzing'].includes(key)) {
+                                      if (['merchant', 'amount', 'currency', 'category', 'timestamp', 'originator_name', 'product_type', 'booking_datetime', 'beneficiary_name', 'status', 'verdict', 'triage', 'isAnalyzing', 'isTriaging'].includes(key)) {
                                         return null
                                       }
                                       return (
