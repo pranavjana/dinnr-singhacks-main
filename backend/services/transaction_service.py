@@ -20,9 +20,14 @@ except ModuleNotFoundError:
     from models.query_params import QueryParameters
     from models.transaction import TransactionRecord, PaymentHistory
     from core.config import settings
+from models.query_params import QueryParameters
+from models.transaction import TransactionRecord, PaymentHistory
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+DEFAULT_TRANSACTIONS_CSV = Path(__file__).resolve().parents[2] / "transactions_mock_1000_for_participants.csv"
 
 
 class TransactionService:
@@ -184,6 +189,69 @@ class TransactionService:
         )
 
         return payment_history
+
+    def get_random_transaction(self) -> TransactionRecord:
+        """
+        Get a random transaction from the dataset.
+
+        Returns:
+            Random TransactionRecord
+
+        Raises:
+            ValueError: If no transactions available
+        """
+        df = self._load_csv()
+
+        if df.empty:
+            raise ValueError("No transactions available in dataset")
+
+        # Get a random row
+        random_row = df.sample(n=1).iloc[0]
+
+        # Convert to dict and clean None values
+        record_dict = {
+            k: (None if pd.isna(v) else v)
+            for k, v in random_row.to_dict().items()
+        }
+
+        return TransactionRecord(**record_dict)
+
+    def get_transactions_by_account(
+        self, account: str, limit: int = 10
+    ) -> list[TransactionRecord]:
+        """
+        Get transactions by originator or beneficiary account.
+
+        Args:
+            account: Account number to search
+            limit: Maximum number of transactions to return
+
+        Returns:
+            List of TransactionRecord objects
+        """
+        df = self._load_csv()
+
+        # Search both originator and beneficiary accounts
+        mask = (
+            (df["originator_account"].str.lower() == account.lower()) |
+            (df["beneficiary_account"].str.lower() == account.lower())
+        )
+
+        result_df = df[mask].head(limit)
+
+        transactions = []
+        for _, row in result_df.iterrows():
+            try:
+                record_dict = {
+                    k: (None if pd.isna(v) else v)
+                    for k, v in row.to_dict().items()
+                }
+                transactions.append(TransactionRecord(**record_dict))
+            except Exception as e:
+                logger.warning(f"Failed to parse transaction: {e}")
+                continue
+
+        return transactions
 
     def get_random_transaction(self) -> TransactionRecord:
         """Retrieve a single random transaction from the dataset."""

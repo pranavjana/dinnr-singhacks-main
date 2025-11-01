@@ -675,3 +675,136 @@ async def analyze_payment(payment: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"payment_analysis_failed - trace_id={trace_id}, error={str(e)}")
         raise
+"""
+Payment analysis agent functions for single-payment workflow.
+"""
+
+import logging
+from typing import Any, Dict, List
+from services.llm_client import grok_client
+from services.transaction_service import transaction_service
+
+logger = logging.getLogger(__name__)
+
+
+async def analyze_payment(payment: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Analyze a single payment and return verdict.
+
+    Args:
+        payment: Payment transaction dictionary
+
+    Returns:
+        Analysis result with verdict, risk_score, etc.
+    """
+    logger.info(f"Analyzing payment: {payment.get('payment_id')}")
+
+    # Build analysis prompt
+    prompt = f"""
+Analyze this payment transaction for AML risks:
+
+Transaction ID: {payment.get('transaction_id')}
+Amount: {payment.get('amount')} {payment.get('currency')}
+Originator: {payment.get('originator_name')} ({payment.get('originator_country')})
+Beneficiary: {payment.get('beneficiary_name')} ({payment.get('beneficiary_country')})
+Channel: {payment.get('channel')}
+Purpose: {payment.get('purpose_code')}
+Narrative: {payment.get('narrative')}
+
+Provide a JSON response with:
+{{
+  "verdict": "pass|suspicious|fail",
+  "risk_score": <0-100>,
+  "justification": "<explanation>",
+  "assigned_team": "<team_name>",
+  "narrative_summary": "<summary>",
+  "rule_references": ["<rule_codes>"],
+  "notable_transactions": [],
+  "recommended_actions": ["<actions>"],
+  "triggered_rules": [],
+  "detected_patterns": [],
+  "llm_patterns": [],
+  "llm_flagged_transactions": []
+}}
+"""
+
+    result = await grok_client.analyze_transactions([payment], prompt)
+    return result
+
+
+def collect_related_transactions(payment: Dict[str, Any], limit: int = 10) -> List[Any]:
+    """
+    Collect related transactions for a payment.
+
+    Args:
+        payment: Payment transaction dictionary
+        limit: Maximum number of related transactions
+
+    Returns:
+        List of related TransactionRecord objects
+    """
+    logger.info(f"Collecting up to {limit} related transactions")
+
+    # Try to find related transactions by originator account
+    originator_account = payment.get('originator_account')
+    if originator_account:
+        transactions = transaction_service.get_transactions_by_account(
+            originator_account,
+            limit=limit
+        )
+        return transactions
+
+    return []
+
+
+async def generate_streaming_analysis(
+    payment: Dict[str, Any],
+    related_transactions: List[Any],
+    rules: Any
+) -> Dict[str, Any]:
+    """
+    Generate analysis for streaming endpoint.
+
+    Args:
+        payment: Payment transaction dictionary
+        related_transactions: List of related transactions
+        rules: Active rules data
+
+    Returns:
+        Analysis result dictionary
+    """
+    logger.info(f"Generating streaming analysis with {len(related_transactions)} related txns")
+
+    # Build comprehensive prompt with related transactions
+    related_summaries = [
+        f"- {tx.transaction_id}: {tx.amount} {tx.currency} via {tx.channel}"
+        for tx in related_transactions[:5]
+    ]
+
+    prompt = f"""
+Analyze this payment with historical context:
+
+Main Transaction:
+- ID: {payment.get('transaction_id')}
+- Amount: {payment.get('amount')} {payment.get('currency')}
+- Originator: {payment.get('originator_name')} ({payment.get('originator_country')})
+- Beneficiary: {payment.get('beneficiary_name')} ({payment.get('beneficiary_country')})
+
+Related Transactions ({len(related_transactions)}):
+{chr(10).join(related_summaries)}
+
+Provide a JSON response with:
+{{
+  "verdict": "pass|suspicious|fail",
+  "risk_score": <0-100>,
+  "justification": "<explanation>",
+  "assigned_team": "<team_name>",
+  "narrative_summary": "<summary>",
+  "rule_references": ["<rule_codes>"],
+  "notable_transactions": [],
+  "recommended_actions": ["<actions>"]
+}}
+"""
+
+    result = await grok_client.analyze_transactions([payment], prompt)
+    return result

@@ -7,4 +7,10 @@ This module contains API route handlers for:
 - Risk analysis
 """
 
-__all__ = []
+from . import health, payment_history, payment_analysis
+
+__all__ = [
+    "health",
+    "payment_history",
+    "payment_analysis",
+]

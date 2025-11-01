@@ -382,3 +382,113 @@ class RulesService:
 
 # Global service instance
 rules_service = RulesService()
+"""
+Rules service for AML compliance rules management.
+"""
+
+import logging
+from typing import Optional, List, Dict, Any
+
+logger = logging.getLogger(__name__)
+
+
+class RulesService:
+    """Service for managing and retrieving AML compliance rules."""
+
+    def __init__(self):
+        """Initialize rules service."""
+        self.rules_cache: Dict[str, List[Dict[str, Any]]] = {}
+
+    async def get_active_rules(
+        self, jurisdiction: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Get active AML rules for a jurisdiction.
+
+        Args:
+            jurisdiction: Optional jurisdiction code (e.g., 'HK', 'SG', 'CH')
+
+        Returns:
+            List of active rule dictionaries
+        """
+        logger.info(f"Fetching active rules for jurisdiction: {jurisdiction}")
+
+        # Default rules for all jurisdictions
+        default_rules = [
+            {
+                "rule_id": "STRUCT_001",
+                "rule_type": "structuring",
+                "description": "Detect structuring patterns below reporting threshold",
+                "threshold": 10000,
+                "enabled": True,
+            },
+            {
+                "rule_id": "VELOCITY_001",
+                "rule_type": "velocity",
+                "description": "Detect unusual transaction velocity",
+                "threshold": 5,
+                "enabled": True,
+            },
+            {
+                "rule_id": "HIGHRISK_001",
+                "rule_type": "high_risk_jurisdiction",
+                "description": "Flag transactions to/from high-risk jurisdictions",
+                "enabled": True,
+            },
+            {
+                "rule_id": "PEP_001",
+                "rule_type": "pep",
+                "description": "Enhanced monitoring for PEP transactions",
+                "enabled": True,
+            },
+        ]
+
+        # Add jurisdiction-specific rules if needed
+        if jurisdiction:
+            jurisdiction_rules = self._get_jurisdiction_rules(jurisdiction)
+            return default_rules + jurisdiction_rules
+
+        return default_rules
+
+    def _get_jurisdiction_rules(self, jurisdiction: str) -> List[Dict[str, Any]]:
+        """
+        Get jurisdiction-specific rules.
+
+        Args:
+            jurisdiction: Jurisdiction code
+
+        Returns:
+            List of jurisdiction-specific rules
+        """
+        jurisdiction_map = {
+            "HK": [
+                {
+                    "rule_id": "HK_001",
+                    "rule_type": "hkma_reporting",
+                    "description": "HKMA suspicious transaction reporting",
+                    "enabled": True,
+                }
+            ],
+            "SG": [
+                {
+                    "rule_id": "SG_001",
+                    "rule_type": "mas_reporting",
+                    "description": "MAS suspicious transaction reporting",
+                    "enabled": True,
+                }
+            ],
+            "CH": [
+                {
+                    "rule_id": "CH_001",
+                    "rule_type": "finma_reporting",
+                    "description": "FINMA suspicious transaction reporting",
+                    "enabled": True,
+                }
+            ],
+        }
+
+        return jurisdiction_map.get(jurisdiction.upper(), [])
+
+
+# Global service instance
+rules_service = RulesService()
