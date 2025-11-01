@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
@@ -42,12 +42,12 @@ def create_app() -> FastAPI:
 
     @app.post("/triage/plan", response_class=PlainTextResponse)
     async def create_plan(
-        screening_result: Dict[str, Any],
+        case_summary: str = Body(..., media_type="text/plain"),
         generator: ReportGenerator = Depends(get_report_generator),
     ) -> PlainTextResponse:
         with REQUEST_LATENCY.labels(endpoint="triage_plan").time():
             try:
-                report = await generator.generate_report(screening_result)
+                report = await generator.generate_report(case_summary)
             except SchemaValidationError as exc:
                 raise HTTPException(status_code=422, detail={"errors": exc.errors}) from exc
             except ReportGenerationError as exc:

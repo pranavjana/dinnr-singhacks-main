@@ -1,0 +1,6 @@
+Alert TR-2025-11-01 originated from retail customer Lee Aaron.
+- $12,750 USD outbound via online banking to Okoye Trading in Nigeria.
+- Prior seven inbound credits followed by rapid outbound within 24-36 hours.
+- Corridor SG→NG on FATF high-risk list, sanctions screening clear.
+- Customer previously warned about source-of-funds documentation gaps.
+Recommendation from first-pass reviewer: request updated SOF packet before releasing further payments; consider soft hold if cooperation lags.
