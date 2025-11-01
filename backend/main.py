@@ -32,6 +32,11 @@ except ModuleNotFoundError:
 # Initialize logger
 logger = get_logger(__name__)
 
+# Set Google Cloud credentials environment variable if configured
+if settings.google_application_credentials:
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = settings.google_application_credentials
+    logger.info(f"Google Cloud credentials configured: {settings.google_application_credentials}")
+
 # Create FastAPI app
 app = FastAPI(
     title="AML Payment Analysis API",
@@ -150,6 +155,24 @@ try:
 except Exception as e:
     logger.warning(f"Could not load rule extraction endpoints: {e}")
     logger.info("Continuing without rule extraction endpoints...")
+
+# Document analysis endpoints
+try:
+    try:
+        from backend.routers import document_analysis
+    except ModuleNotFoundError:
+        from routers import document_analysis
+
+    app.include_router(
+        document_analysis.router,
+        prefix="/api/v1/documents",
+        tags=["Document Analysis"]
+    )
+    logger.info("Document analysis endpoints registered successfully at /api/v1/documents")
+except Exception as e:
+    logger.error(f"Failed to load document analysis endpoints: {e}")
+    import traceback
+    traceback.print_exc()
 
 # Transaction monitoring endpoints (from src/api)
 try:

@@ -31,3 +31,14 @@ respx==0.21.1
 schemathesis==3.39.16
 ruff==0.4.7
 mypy==1.10.1
+
+# Document processing
+pdfplumber==0.11.0
+python-docx==1.1.0
+Pillow==10.3.0
+pytesseract==0.3.10
+pyspellchecker==0.8.1
+imagehash==4.3.1
+numpy==1.26.4
+pillow-heif==0.15.0
+google-cloud-vision==3.11.0

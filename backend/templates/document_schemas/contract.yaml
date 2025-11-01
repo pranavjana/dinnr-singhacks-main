@@ -1,0 +1,115 @@
+# contracts.yaml — validation template for agreements/contracts
+
+_defaults: &defaults
+  min_words: 800
+  spelling_error_rate_max: 0.02
+  required_headers: []
+  optional_headers: []
+  header_order_strict: true
+  min_words_per_section: {}
+  allowed_formats: [pdf, docx]
+  page_limits: { min: 2, max: 200 }
+  font_limits: { max_distinct_fonts: 6 }
+  spacing_rules:
+    max_double_space_ratio: 0.01
+    max_tabs: 20
+  metadata_requirements:
+    require_created_or_modified: true
+    forbid_future_dates: true
+  redaction_rules:
+    allow_black_boxes: true
+    require_redaction_for:
+      - "\\b[0-9]{12,16}\\b"   # card/long IDs
+      - "[A-Z0-9]{8,}-[A-Z0-9]{8,}"  # contract IDs
+
+# Apply when pages are scanned images (or when doc contains embedded images)
+_image_defaults: &image_defaults
+  image_requirements:
+    exif_required: false
+    min_resolution: { width: 1200, height: 1200 }
+    allow_screenshots: false
+  duplicate_check: { enabled: true, corpus_dir: "./corpus", max_phash_distance: 5 }
+  tamper_check: { ela_thresholds: { mean: 35, var: 1200 } }
+
+# -------- Contract types --------
+
+msa:   # Master Services Agreement
+  <<: *defaults
+  required_headers:
+    - Definitions
+    - Scope of Services
+    - Term and Termination
+    - Fees and Payment
+    - Confidentiality
+    - Intellectual Property
+    - Warranties
+    - Limitation of Liability
+    - Indemnification
+    - Governing Law
+    - Signatures
+  min_words_per_section:
+    Definitions: 80
+    Scope of Services: 120
+    Term and Termination: 60
+    Fees and Payment: 80
+    Confidentiality: 60
+    Intellectual Property: 60
+    Warranties: 40
+    Limitation of Liability: 40
+    Indemnification: 40
+    Governing Law: 20
+    Signatures: 10
+  page_limits: { min: 5, max: 120 }
+  <<: *image_defaults
+
+sow:   # Statement of Work
+  <<: *defaults
+  required_headers:
+    - Background
+    - Deliverables
+    - Milestones and Timeline
+    - Acceptance Criteria
+    - Pricing
+    - Assumptions
+    - Dependencies
+    - Change Control
+    - Signatures
+  min_words: 600
+  min_words_per_section:
+    Deliverables: 120
+    Milestones and Timeline: 80
+    Acceptance Criteria: 80
+    Pricing: 60
+  page_limits: { min: 3, max: 50 }
+
+nda:   # Non-Disclosure Agreement
+  <<: *defaults
+  required_headers:
+    - Parties
+    - Definitions
+    - Confidential Information
+    - Exclusions
+    - Obligations
+    - Term
+    - Remedies
+    - Governing Law
+    - Signatures
+  min_words: 400
+  page_limits: { min: 2, max: 20 }
+
+amendment:  # Contract Amendment
+  <<: *defaults
+  required_headers:
+    - Reference Agreement
+    - Amendments
+    - Effective Date
+    - No Other Changes
+    - Signatures
+  min_words: 250
+  page_limits: { min: 1, max: 10 }
+
+risk_overrides:
+  msa: { missing_section: 3, header_mismatch: 2, spelling_over_threshold: 2, font_chaos: 1 }
+  sow: { missing_section: 3, header_mismatch: 2, spelling_over_threshold: 2 }
+  nda: { missing_section: 3, header_mismatch: 2 }
+  amendment: { missing_section: 3 }
