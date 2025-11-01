@@ -1,0 +1,24 @@
+template_id: request_ubo_docs_v1
+version: 1.0.0
+locale: en
+channel: EMAIL
+purpose: Request Ultimate Beneficial Owner documentation from customer
+when_to_use: Use when UBO gaps or risks are identified for corporate accounts
+required_fields:
+  - customer_reference
+  - rule_codes
+  - requested_documents
+playbook_steps:
+  - Reference corporate policy clause
+  - List required UBO documents
+  - Provide response deadline and contact
+compliance_notes: Ensure only template placeholders are used; no free text rationale
+rules:
+  - UBO_GAP
+  - UBO_RISK
+risk_levels:
+  - MEDIUM
+corridors:
+  - MEDIUM
+fewshot_examples:
+  - "Please share notarised UBO declaration identifying individuals with ≥25% ownership."
