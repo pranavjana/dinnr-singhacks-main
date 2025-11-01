@@ -5,9 +5,13 @@ Handles API key validation and model configuration for embeddings
 import logging
 from functools import lru_cache
 from typing import Optional
+import sys
+import os
 
 import google.generativeai as genai
 
+# Import settings from backend/config.py
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from config import settings
 
 logger = logging.getLogger(__name__)

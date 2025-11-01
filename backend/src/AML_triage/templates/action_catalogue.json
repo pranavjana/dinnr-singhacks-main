@@ -1,0 +1,129 @@
+[
+  {
+    "action_id": "CREATE_CASE",
+    "description": "Open an internal AML investigation case in CaseWorks",
+    "requires_approval": false,
+    "allowed_if": [
+      {"decision": ["SUS", "FAIL"]}
+    ],
+    "tool": "case_mgmt.create_case",
+    "params": {
+      "priority": "HIGH"
+    },
+    "compliance_notes": "Create a trackable case for any SUS/FAIL decision",
+    "risk_tier": "HIGH"
+  },
+  {
+    "action_id": "REQUEST_SOF_DOCS",
+    "description": "Request source-of-funds documentation",
+    "requires_approval": false,
+    "allowed_if": [
+      {"rule_codes": ["SOF_MISSING", "SOF_MISMATCH"]}
+    ],
+    "tool": "comms.send_template",
+    "params": {
+      "audience": "CUSTOMER"
+    },
+    "compliance_notes": "Template-only communication; no free text",
+    "risk_tier": "MEDIUM"
+  },
+  {
+    "action_id": "REQUEST_UBO_DOCS",
+    "description": "Request Ultimate Beneficial Owner documentation",
+    "requires_approval": false,
+    "allowed_if": [
+      {"rule_codes": ["UBO_GAP", "UBO_RISK"]}
+    ],
+    "tool": "comms.send_template",
+    "params": {
+      "audience": "CUSTOMER"
+    },
+    "compliance_notes": "Ensure placeholders cover UBO identifiers only",
+    "risk_tier": "MEDIUM"
+  },
+  {
+    "action_id": "PLACE_SOFT_HOLD",
+    "description": "Place a soft hold on the account pending review",
+    "requires_approval": true,
+    "allowed_if": [
+      {"decision": ["SUS", "FAIL"], "high_risk_corridor": true}
+    ],
+    "tool": "account_controls.place_soft_hold",
+    "params": {
+      "duration_hours": 72
+    },
+    "compliance_notes": "Requires compliance approval before execution",
+    "risk_tier": "HIGH"
+  },
+  {
+    "action_id": "ESCALATE_L2_AML",
+    "description": "Escalate to Level 2 AML analyst",
+    "requires_approval": false,
+    "allowed_if": [
+      {"decision": ["SUS", "FAIL"], "rule_codes": ["AML_COMPLEX"]}
+    ],
+    "tool": "routing.assign_team",
+    "params": {
+      "team": "L2_AML"
+    },
+    "compliance_notes": "Ensures complex cases receive specialist review",
+    "risk_tier": "HIGH"
+  },
+  {
+    "action_id": "ROUTE_KYC_OPS",
+    "description": "Assign follow-up to KYC Ops for missing data",
+    "requires_approval": false,
+    "allowed_if": [
+      {"rule_codes": ["KYC_INCOMPLETE"]}
+    ],
+    "tool": "routing.assign_team",
+    "params": {
+      "team": "KYC_OPS"
+    },
+    "compliance_notes": "Standard remediation for KYC data gaps",
+    "risk_tier": "MEDIUM"
+  },
+  {
+    "action_id": "FILE_STR_DRAFT",
+    "description": "Draft Suspicious Transaction Report",
+    "requires_approval": true,
+    "allowed_if": [
+      {"decision": ["FAIL"]},
+      {"rule_codes": ["STR_TRIGGER"]}
+    ],
+    "tool": "reg_reporting.create_str_draft",
+    "params": {
+      "jurisdiction": "SG"
+    },
+    "compliance_notes": "MLRO approval required prior to submission",
+    "risk_tier": "HIGH"
+  },
+  {
+    "action_id": "SEND_RM_BRIEF",
+    "description": "Send internal RM briefing",
+    "requires_approval": false,
+    "allowed_if": [
+      {"decision": ["SUS"]}
+    ],
+    "tool": "comms.send_template",
+    "params": {
+      "audience": "RM"
+    },
+    "compliance_notes": "Internal-only, professional tone",
+    "risk_tier": "LOW"
+  },
+  {
+    "action_id": "SEND_CUSTOMER_DOCREQ",
+    "description": "Send customer documentation request",
+    "requires_approval": false,
+    "allowed_if": [
+      {"decision": ["SUS"], "rule_codes": ["SOF_MISSING", "KYC_INCOMPLETE"]}
+    ],
+    "tool": "comms.send_template",
+    "params": {
+      "audience": "CUSTOMER"
+    },
+    "compliance_notes": "Template ensures neutral tone and no additional PII",
+    "risk_tier": "MEDIUM"
+  }
+]

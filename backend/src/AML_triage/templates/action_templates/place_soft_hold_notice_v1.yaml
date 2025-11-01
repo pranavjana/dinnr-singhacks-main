@@ -1,0 +1,24 @@
+template_id: place_soft_hold_notice_v1
+version: 1.0.0
+locale: en
+channel: INTERNAL
+purpose: Guidance for compliance team to place a temporary soft hold
+when_to_use: High-risk corridor with escalation scenario pending approval
+required_fields:
+  - account_reference
+  - corridor
+  - escalation_reason
+playbook_steps:
+  - Confirm MLRO approval prior to hold
+  - Notify relationship manager of hold status
+  - Document rationale in case management system
+compliance_notes: Approval required before execution; hold is reversible once cleared
+rules:
+  - STR_TRIGGER
+  - AML_COMPLEX
+risk_levels:
+  - HIGH
+corridors:
+  - HIGH
+fewshot_examples:
+  - "Soft hold requested due to FATF high-risk corridor transaction exceeding 10k USD."

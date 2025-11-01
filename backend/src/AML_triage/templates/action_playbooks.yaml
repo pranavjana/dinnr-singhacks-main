@@ -1,0 +1,94 @@
+REQUEST_SOF_DOCS:
+  title: "Request Source-of-Funds Documentation"
+  objective: "Collect documentary evidence that explains the origin of funds for the flagged transactions."
+  next_steps:
+    - "Send the pre-approved SOF customer request template identified by the action parameters."
+    - "Log the outreach in the case journal and set a reminder to chase within 5 business days."
+    - "Flag the case for escalation if the customer fails to respond or provides incomplete evidence."
+  reviewer_checks:
+    - "Confirm the customer has not already submitted acceptable SOF documentation in the past 90 days."
+    - "Assess whether additional questions on transaction purpose are required."
+  approvals: "No approvals required."
+
+PLACE_SOFT_HOLD:
+  title: "Place Temporary Soft Hold"
+  objective: "Prevent further outbound activity while the investigation gathers more evidence."
+  next_steps:
+    - "Submit the soft hold instruction through the account controls tool with the default 72 hour duration."
+    - "Notify the relationship manager that the customer cannot transact until the review completes."
+    - "Document the control rationale and set a review reminder before the hold expires."
+  reviewer_checks:
+    - "Ensure no critical payments (payroll, regulatory) will be blocked; arrange manual review if needed."
+  approvals: "Requires Compliance/MLRO approval prior to execution."
+
+CREATE_CASE:
+  title: "Create Investigation Case"
+  objective: "Ensure the alert is tracked within the internal case management system."
+  next_steps:
+    - "Create or update the CaseWorks record with the latest alert context and transaction notes."
+    - "Attach relevant evidence, including transaction snapshots and analyst observations."
+    - "Assign the case to the appropriate investigation queue."
+  reviewer_checks:
+    - "Verify the case references the current trace ID and screening decision."
+  approvals: "No approvals required."
+
+ESCALATE_L2_AML:
+  title: "Escalate to Level 2 AML Analyst"
+  objective: "Route complex cases to specialist reviewers for deeper analysis."
+  next_steps:
+    - "Submit the escalation request with a summary of detected patterns and open questions."
+    - "Highlight any looming deadlines (STR filing, onboarding hold) for prioritisation."
+  reviewer_checks:
+    - "Confirm the L2 queue capacity or identify a named analyst if required by SOP."
+  approvals: "No approvals required but escalation rationale must be documented."
+
+REQUEST_UBO_DOCS:
+  title: "Request Ultimate Beneficial Owner Documentation"
+  objective: "Obtain UBO attestations or corporate structure evidence to validate ownership."
+  next_steps:
+    - "Send the UBO template to the customer or corporate secretary."
+    - "Capture the expected delivery timeline and set follow-up reminders."
+  reviewer_checks:
+    - "Confirm previously supplied documentation is not already sufficient."
+  approvals: "No approvals required."
+
+ROUTE_KYC_OPS:
+  title: "Route to KYC Operations"
+  objective: "Hand over for remediation of missing or outdated KYC information."
+  next_steps:
+    - "Raise a task in the KYC Ops queue with the specific data gaps and due dates."
+    - "Provide supporting documents to avoid duplicate outreach."
+  reviewer_checks:
+    - "Check whether other cases already requested the same documents to avoid duplicate customer asks."
+  approvals: "No approvals required."
+
+FILE_STR_DRAFT:
+  title: "Prepare Suspicious Transaction Report Draft"
+  objective: "Compile facts and rationale needed for MLRO STR evaluation."
+  next_steps:
+    - "Populate the STR draft template with the transaction chronology and customer explanation (if any)."
+    - "Attach supporting evidence and analyst notes."
+    - "Schedule a review with the MLRO before the statutory deadline."
+  reviewer_checks:
+    - "Ensure all legal entity identifiers and dates are accurate."
+  approvals: "MLRO approval mandatory before submission."
+
+SEND_RM_BRIEF:
+  title: "Send Relationship Manager Briefing"
+  objective: "Inform the RM of the investigation status and interim controls."
+  next_steps:
+    - "Use the internal briefing template to share key findings and outstanding customer asks."
+    - "Advise the RM on customer talking points consistent with the investigation posture."
+  reviewer_checks:
+    - "Confirm no customer-facing details are exposed in the internal briefing."
+  approvals: "No approvals required."
+
+SEND_CUSTOMER_DOCREQ:
+  title: "Send Customer Documentation Request"
+  objective: "Collect additional KYC or transactional documentation directly from the customer."
+  next_steps:
+    - "Dispatch the portal or email template with specific document checklist."
+    - "Record the customer commitment date and monitor for response."
+  reviewer_checks:
+    - "Ensure messaging stays within approved template boundaries; avoid free-text edits."
+  approvals: "No approvals required."
