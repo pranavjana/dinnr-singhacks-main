@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 5f3e285e-d1d1-4667-b7a5-553229de83f8 has been flagged with a decision of SUS, indicating a potential suspicious activity that requires further investigation. Given the lack of provided signals, profile considerations, and transaction snapshot, a thorough review is necessary to determine the legitimacy of the transactions. The recommended action path involves creating an investigation case, escalating it to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Deprioritisation**
+No alternative actions were considered, as the provided information does not suggest any other viable paths. The recommended actions are prioritised due to the potential suspicious nature of the transactions and the need for further analysis.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the SUS decision indicates a potential risk that warrants further investigation. The recommended actions aim to gather more information and context to determine the legitimacy of the transactions.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request. A follow-up review is recommended within 10 business days to assess the progress of the investigation and determine if additional actions are required. Outstanding evidence, such as the transaction snapshot and profile considerations, should be obtained to support the investigation. The reviewer should also verify that the case is properly documented and updated in the CaseWorks record.

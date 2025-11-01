@@ -5,7 +5,7 @@ Loads environment variables and provides configuration settings.
 
 import os
 from typing import Optional
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 
@@ -14,15 +14,23 @@ class Settings(BaseSettings):
 
     # FastAPI
     FASTAPI_ENV: str = Field(default="development", env="FASTAPI_ENV")
-    SECRET_KEY: str = Field(env="SECRET_KEY")
+    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     API_TITLE: str = "PDF Document Processing API"
     API_VERSION: str = "1.0.0"
 
-    # CORS
-    CORS_ORIGINS: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
-        env="CORS_ORIGINS"
+    # CORS - stored as string in env, parsed to list
+    cors_origins_str: str = Field(
+        default="http://localhost:3000,http://localhost:8000",
+        env="CORS_ORIGINS",
+        exclude=True
     )
+
+    @property
+    def CORS_ORIGINS(self) -> list[str]:
+        """Parse CORS_ORIGINS from comma-separated string."""
+        if isinstance(self.cors_origins_str, list):
+            return self.cors_origins_str
+        return [origin.strip() for origin in self.cors_origins_str.split(",")]
 
     # Database
     DATABASE_URL: str = Field(env="DATABASE_URL")
@@ -82,10 +90,12 @@ class Settings(BaseSettings):
     IS_TESTING: bool = Field(default=False, env="IS_TESTING")
     DEBUG: bool = Field(default=False, env="DEBUG")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

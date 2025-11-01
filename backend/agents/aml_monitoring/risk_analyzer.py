@@ -189,6 +189,14 @@ def parse_response(state: RiskAnalysisState) -> RiskAnalysisState:
             response_dict["analysis_timestamp"] = datetime.utcnow().isoformat() + "Z"
         if "error" not in response_dict:
             response_dict["error"] = None
+        if "narrative_summary" not in response_dict:
+            # Create summary from flagged transactions and patterns
+            flagged_count = len(response_dict.get("flagged_transactions", []))
+            patterns_count = len(response_dict.get("identified_patterns", []))
+            response_dict["narrative_summary"] = (
+                f"Analysis identified {flagged_count} flagged transaction(s) "
+                f"and {patterns_count} suspicious pattern(s)."
+            )
 
         # Validate with Pydantic
         analysis_result = AnalysisResult(**response_dict)

@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 2a714e6f-1973-4225-b9f2-4ebdec6259dd has been flagged for further investigation due to a screening decision of SUS, indicating potential suspicious activity. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case, escalate to a Level 2 AML analyst for deeper analysis, and request source-of-funds documentation to gather more information. The recommended actions aim to ensure thorough tracking, expert review, and evidence collection to determine the legitimacy of the transactions.
+
+**Recommended Actions:**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, attaching relevant evidence and assigning it to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for in-depth analysis, submitting a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template and logging the outreach in the case journal, with a reminder to chase within 5 business days.
+
+**Alternative Actions and Deprioritisation**
+No alternative actions are recommended at this stage, as the primary focus is on gathering more information through the creation of an investigation case, escalation to a specialist reviewer, and collection of documentary evidence.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS warrants further investigation to determine the legitimacy of the transactions and potential money laundering risks.
+
+**Next Steps**
+The reviewer should monitor the case for updates, particularly the response to the source-of-funds documentation request, and follow up within 5 business days if no response is received. The reviewer should also verify that the case is properly tracked within the internal case management system and that the escalation to the Level 2 AML analyst is documented. Outstanding evidence required includes the source-of-funds documentation and any additional information that may be requested by the Level 2 AML analyst during their review.

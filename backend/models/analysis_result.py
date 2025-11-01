@@ -82,14 +82,19 @@ class AnalysisResult(BaseModel):
 
     # Summary
     narrative_summary: str = Field(
-        ..., description="Human-readable explanation of findings"
+        default="No summary provided",
+        description="Human-readable explanation of findings"
     )
 
     # Metadata
     analyzed_transaction_count: int = Field(
-        ..., description="Number of transactions analyzed", ge=0
+        default=0,
+        description="Number of transactions analyzed", ge=0
     )
-    analysis_timestamp: datetime = Field(..., description="When analysis was performed")
+    analysis_timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="When analysis was performed"
+    )
 
     # Error handling (FR-018)
     error: str | None = Field(

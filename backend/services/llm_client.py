@@ -4,6 +4,7 @@ LLM client for Groq API integration.
 Provides async client for transaction analysis with retry logic.
 """
 
+import os
 import logging
 import asyncio
 from typing import Any

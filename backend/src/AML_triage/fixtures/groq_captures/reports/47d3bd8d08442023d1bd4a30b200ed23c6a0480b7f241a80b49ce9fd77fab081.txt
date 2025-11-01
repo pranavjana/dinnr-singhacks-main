@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 5e6b8e00-c0db-4f57-990f-a1417cdb9f2c has been flagged for further review due to a screening decision of SUS, indicating potential suspicious activity. Given the lack of provided signals, profile considerations, and transaction snapshot, a thorough investigation is necessary to determine the legitimacy of the transactions. The recommended action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, ensuring the case references the current trace ID and screening decision.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for specialist review, submitting a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template and logging the outreach in the case journal, with a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary objective is to gather more information and conduct a thorough analysis. However, if the customer fails to respond or provides incomplete evidence, the case may be flagged for further escalation.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS indicates potential suspicious activity, justifying the need for a comprehensive investigation.
+
+**Next Steps**
+The reviewer should monitor the case for updates, particularly the response to the source-of-funds documentation request. A follow-up review is recommended within 10 business days to assess the customer's response and determine the next course of action. Outstanding evidence required includes the customer's response to the source-of-funds documentation request and any additional information gathered during the investigation.

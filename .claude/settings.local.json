@@ -5,7 +5,13 @@
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
       "Bash(git rev-parse:*)",
       "Bash(tree:*)",
-      "Bash(.specify/scripts/bash/update-agent-context.sh:*)"
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)",
+      "Bash(source:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(env)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []

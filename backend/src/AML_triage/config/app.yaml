@@ -2,7 +2,7 @@ schema_version: v1
 strict_fields: true
 template_top_k: 2
 model_id: llama-3.3-70b-versatile
-offline_mode: true
+offline_mode: false
 
 paths:
   contracts_dir: src/AML_triage/contracts

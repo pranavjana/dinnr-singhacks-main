@@ -681,15 +681,24 @@ Payment analysis agent functions for single-payment workflow.
 
 import logging
 from typing import Any, Dict, List
-from services.llm_client import grok_client
-from services.transaction_service import transaction_service
+
+try:
+    from backend.services.transaction_service import transaction_service
+    from backend.agents.aml_monitoring.risk_analyzer import run_risk_analysis
+    from backend.models.transaction import TransactionRecord
+    from backend.services.rules_service import rules_service
+except ModuleNotFoundError:
+    from services.transaction_service import transaction_service
+    from agents.aml_monitoring.risk_analyzer import run_risk_analysis
+    from models.transaction import TransactionRecord
+    from services.rules_service import rules_service
 
 logger = logging.getLogger(__name__)
 
 
 async def analyze_payment(payment: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Analyze a single payment and return verdict.
+    Analyze a single payment using comprehensive LangGraph agent.
 
     Args:
         payment: Payment transaction dictionary
@@ -699,37 +708,151 @@ async def analyze_payment(payment: Dict[str, Any]) -> Dict[str, Any]:
     """
     logger.info(f"Analyzing payment: {payment.get('payment_id')}")
 
-    # Build analysis prompt
-    prompt = f"""
-Analyze this payment transaction for AML risks:
+    try:
+        # Convert payment dict to TransactionRecord
+        payment_record = TransactionRecord(**payment)
 
-Transaction ID: {payment.get('transaction_id')}
-Amount: {payment.get('amount')} {payment.get('currency')}
-Originator: {payment.get('originator_name')} ({payment.get('originator_country')})
-Beneficiary: {payment.get('beneficiary_name')} ({payment.get('beneficiary_country')})
-Channel: {payment.get('channel')}
-Purpose: {payment.get('purpose_code')}
-Narrative: {payment.get('narrative')}
+        # Get active compliance rules
+        jurisdiction = payment.get('originator_country') or payment.get('booking_jurisdiction')
+        compliance_rules = await rules_service.get_active_rules(jurisdiction=jurisdiction)
 
-Provide a JSON response with:
-{{
-  "verdict": "pass|suspicious|fail",
-  "risk_score": <0-100>,
-  "justification": "<explanation>",
-  "assigned_team": "<team_name>",
-  "narrative_summary": "<summary>",
-  "rule_references": ["<rule_codes>"],
-  "notable_transactions": [],
-  "recommended_actions": ["<actions>"],
-  "triggered_rules": [],
-  "detected_patterns": [],
-  "llm_patterns": [],
-  "llm_flagged_transactions": []
-}}
-"""
+        # Collect related transactions for context
+        related_txns = collect_related_transactions(payment, limit=10)
+        all_transactions = [payment_record] + related_txns
 
-    result = await grok_client.analyze_transactions([payment], prompt)
-    return result
+        # Run comprehensive LangGraph analysis
+        analysis_result = await run_risk_analysis(
+            transactions=all_transactions,
+            rules_data=None,  # Could add rules validation here
+            compliance_rules=compliance_rules,
+            current_payment=payment
+        )
+
+        # Map comprehensive analysis to simple verdict format with higher pass threshold
+        # Adjust thresholds: 0-6 = pass, 6-8 = suspicious, 8-10 = fail
+        overall_score = analysis_result.overall_risk_score or 5
+
+        if overall_score < 6.0:
+            verdict = "pass"
+        elif overall_score < 8.0:
+            verdict = "suspicious"
+        else:
+            verdict = "fail"
+
+        risk_score = overall_score * 10  # Scale 0-10 to 0-100
+
+        # Extract flagged transactions
+        flagged_txns = [
+            {
+                "transaction_id": ft.transaction_id,
+                "reason": ft.reason,
+                "risk_level": ft.risk_level
+            }
+            for ft in analysis_result.flagged_transactions
+        ]
+
+        # Extract patterns
+        patterns = [
+            {
+                "pattern_type": p.pattern_type,
+                "description": p.description,
+                "severity": p.severity,
+                "affected_transactions": p.affected_transactions
+            }
+            for p in analysis_result.identified_patterns
+        ]
+
+        # Generate trace_id for tracking
+        import uuid
+        trace_id = str(uuid.uuid4())
+
+        # Build comprehensive response
+        result = {
+            "payment_id": payment.get("transaction_id"),
+            "trace_id": trace_id,
+            "verdict": verdict,
+            "risk_score": risk_score,
+            "justification": analysis_result.narrative_summary,
+            "assigned_team": _assign_team(verdict, patterns),
+            "narrative_summary": analysis_result.narrative_summary,
+            "rule_references": [p.pattern_type for p in analysis_result.identified_patterns],
+            "notable_transactions": flagged_txns,
+            "recommended_actions": _generate_actions(verdict, patterns),
+            "triggered_rules": patterns,
+            "detected_patterns": patterns,
+            "llm_patterns": [p.pattern_type for p in analysis_result.identified_patterns],
+            "llm_flagged_transactions": flagged_txns
+        }
+
+        logger.info(f"Analysis complete: verdict={verdict}, risk_score={risk_score}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Analysis failed: {e}", exc_info=True)
+        # Fallback to basic analysis
+        return {
+            "verdict": "suspicious",
+            "risk_score": 50,
+            "justification": f"Analysis failed: {str(e)}. Manual review required.",
+            "assigned_team": "AML Review",
+            "narrative_summary": "Automated analysis unavailable",
+            "rule_references": [],
+            "notable_transactions": [],
+            "recommended_actions": ["Manual review required"],
+            "triggered_rules": [],
+            "detected_patterns": [],
+            "llm_patterns": [],
+            "llm_flagged_transactions": []
+        }
+
+
+def _assign_team(verdict: str, patterns: List[Dict]) -> str:
+    """Assign appropriate team based on verdict and patterns."""
+    if verdict == "fail":
+        return "AML Investigation"
+    elif verdict == "suspicious":
+        # Check pattern types for specialized teams
+        pattern_types = [p.get("pattern_type", "") for p in patterns]
+        if any("sanctions" in p.lower() or "pep" in p.lower() for p in pattern_types):
+            return "Sanctions Screening"
+        elif any("cash" in p.lower() for p in pattern_types):
+            return "Cash-AML Review"
+        else:
+            return "AML Review"
+    else:
+        return "Compliance"
+
+
+def _generate_actions(verdict: str, patterns: List[Dict]) -> List[str]:
+    """Generate recommended actions based on verdict and patterns."""
+    actions = []
+
+    if verdict == "fail":
+        actions.extend([
+            "File Suspicious Activity Report (SAR)",
+            "Freeze transaction pending investigation",
+            "Escalate to senior compliance officer"
+        ])
+    elif verdict == "suspicious":
+        actions.extend([
+            "Request source-of-funds documentation",
+            "Conduct enhanced due diligence",
+            "Review customer transaction history"
+        ])
+    else:
+        actions.append("Continue monitoring")
+
+    # Add pattern-specific actions
+    for pattern in patterns:
+        pattern_type = pattern.get("pattern_type", "").lower()
+        if "sanctions" in pattern_type:
+            actions.append("Verify against updated sanctions lists")
+        elif "structuring" in pattern_type or "threshold" in pattern_type:
+            actions.append("Analyze related transactions for structuring")
+        elif "pep" in pattern_type:
+            actions.append("Verify PEP status and relationship")
+
+    return list(set(actions))  # Remove duplicates
 
 
 def collect_related_transactions(payment: Dict[str, Any], limit: int = 10) -> List[Any]:
