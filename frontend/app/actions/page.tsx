@@ -130,7 +130,7 @@ export default function ActionsPage() {
   useEffect(() => {
     const fetchActions = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/v1/transactions?has_action=true`)
+        const response = await fetch(`/api/v1/transactions?has_action=true`)
         if (!response.ok) {
           throw new Error("Failed to fetch actions")
         }

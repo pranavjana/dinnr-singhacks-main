@@ -62,6 +62,10 @@ const data = {
           title: "Actions",
           url: "/actions",
         },
+        {
+          title: "Documents",
+          url: "/documents",
+        },
       ],
     },
     {

@@ -156,7 +156,7 @@ except Exception as e:
     logger.warning(f"Could not load rule extraction endpoints: {e}")
     logger.info("Continuing without rule extraction endpoints...")
 
-<<<<<<< HEAD
+
 # Transaction monitoring endpoints (from src/api)
 try:
     from api.transactions import router as transactions_router
@@ -165,7 +165,6 @@ try:
 except Exception as e:
     logger.warning(f"Could not load transaction monitoring endpoints: {e}")
     logger.info("Continuing without transaction monitoring endpoints...")
-=======
 # Document analysis endpoints
 try:
     try:
@@ -183,7 +182,23 @@ except Exception as e:
     logger.error(f"Failed to load document analysis endpoints: {e}")
     import traceback
     traceback.print_exc()
->>>>>>> 3e21cea (part 2 functionality full)
+
+# Audit trail endpoints
+try:
+    try:
+        from backend.routers import audit
+    except ModuleNotFoundError:
+        from routers import audit
+
+    app.include_router(
+        audit.router,
+        tags=["Audit Trail"]
+    )
+    logger.info("Audit trail endpoints registered successfully")
+except Exception as e:
+    logger.error(f"Failed to load audit trail endpoints: {e}")
+    import traceback
+    traceback.print_exc()
 
 
 if __name__ == "__main__":

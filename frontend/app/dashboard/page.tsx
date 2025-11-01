@@ -142,6 +142,14 @@ export default function Page() {
 
   const handleDeleteTransaction = async (transactionId: string, index: number) => {
     try {
+      // Validate transaction ID
+      if (!transactionId || transactionId === 'undefined') {
+        toast.error("Cannot delete transaction", {
+          description: "Transaction has no valid ID",
+        })
+        return
+      }
+
       // Delete from database
       await api.deleteTransaction(transactionId)
 
