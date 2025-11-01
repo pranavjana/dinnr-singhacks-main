@@ -144,39 +144,34 @@ All code changes (frontend, backend, agent logic) require:
 
 ## Collaboration Expectations & Governance
 
-### Team Communication
-- Async-first: Document decisions in RFC format (request for comment) in GitHub Issues before implementation.
-- Synchronous standups: 5-minute daily standup (async update in Slack if timezone prevents live sync).
-- Code comments: Explain *why* not *what*; especially required for regulatory rule logic and agent decision trees.
-- Architectural decision records (ADRs): Any major design change must be recorded in `.specify/adr/` directory.
+### [PRINCIPLE_2_NAME]
+<!-- Example: II. CLI Interface -->
+[PRINCIPLE_2_DESCRIPTION]
+<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
 
-### Responsibility Assignment
-- **AML Regulatory Logic**: One designated team member acts as compliance subject matter expert; all compliance-critical PRs reviewed by this person.
-- **Agent Design & LangGraph**: Another team member owns LangGraph architecture; all agent workflow changes, state schemas, tool definitions, and graph structure reviewed by this person; responsible for agent observability setup (Langsmith).
-- **Frontend UX & shadcn/ui**: One team member owns Next.js dashboard and shadcn/ui component consistency; ensures Server Components used correctly, Tailwind utilities followed, dark mode support, accessibility standards enforced.
-- **Backend Infrastructure**: One team member owns FastAPI setup, Supabase integration, monitoring; SLA and performance owned by this role; responsible for API contract stability.
-- **Integration & Testing**: One team member owns test strategy, integration tests, and CI/CD; test coverage standards and e2e test suite ownership by this role; responsible for test infrastructure and CI/CD reliability.
+### [PRINCIPLE_3_NAME]
+<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
+[PRINCIPLE_3_DESCRIPTION]
+<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
 
-### Conflict Resolution
-- Technical disagreements resolved via RFC + architectural review; decision made within 24 hours.
-- If consensus cannot be reached, escalate to the hackathon mentor for guidance.
-- No code merged without resolution of blocking comments.
+### [PRINCIPLE_4_NAME]
+<!-- Example: IV. Integration Testing -->
+[PRINCIPLE_4_DESCRIPTION]
+<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
 
-## Governance & Amendment Procedure
+### [PRINCIPLE_5_NAME]
+<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
+[PRINCIPLE_5_DESCRIPTION]
+<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
 
-### Constitution Authority
-This constitution supersedes all prior practices and guidelines. All technical decisions, code reviews, and deployment approvals must align with these principles. Violations are tracked and addressed in retros.
+## [SECTION_2_NAME]
+<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
-### Amendment Process
-1. **Proposal**: Submit a GitHub Issue with title `[CONSTITUTION] <Change Description>` detailing the motivation and proposed change.
-2. **Discussion**: Team discusses for max 24 hours asynchronously; decision made by consensus or mentor guidance.
-3. **Documentation**: Approved amendments are integrated into this document with version bump and change log.
-4. **Communication**: All team members notified of amendment; changes to dependent artifacts (spec.md, tasks.md, workflow files) are prioritized immediately.
+[SECTION_2_CONTENT]
+<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
 
-### Version Policy
-- **MAJOR** (e.g., 2.0.0): Removal or radical redefinition of a core principle.
-- **MINOR** (e.g., 1.1.0): Addition of a new principle or materially expanded guidance.
-- **PATCH** (e.g., 1.0.1): Clarifications, wording refinements, non-semantic corrections.
+## [SECTION_3_NAME]
+<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
 
 ### Compliance Review
 All PRs must include a checklist item: `- [ ] Verified compliance with Constitution (Core Principles I–VIII)`. Code cannot be merged without this check signed off.
@@ -186,6 +181,7 @@ All PRs must include a checklist item: `- [ ] Verified compliance with Constitut
 - **Backend/Agent PRs**: `- [ ] Code in /backend directory` | `- [ ] LangGraph graph structure valid and logged` | `- [ ] Agent state schema typed (Pydantic)` | `- [ ] All tools have error handling` | `- [ ] Max iterations set with escape hatch` | `- [ ] Reasoning chain preserved for audit trail`
 - **Integration PRs**: `- [ ] Code changes respect /backend and /frontend boundaries` | `- [ ] E2E test coverage for user journey` | `- [ ] API contract stability verified` | `- [ ] No cross-layer responsibility violations`
 
----
+[GOVERNANCE_RULES]
+<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
 **Version**: 1.2.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01

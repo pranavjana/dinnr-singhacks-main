@@ -1,6 +1,8 @@
-# Core dependencies for MAS AML/CFT Document Crawler
-requests==2.31.0
-beautifulsoup4==4.12.2
+# FastAPI and server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Data validation and settings
 pydantic==2.5.0
 pydantic-settings==2.1.0
 python-dateutil==2.8.2
@@ -49,6 +51,4 @@ structlog==24.1.0
 # Retry logic
 tenacity==8.2.3
 
-# Development tools
-ruff==0.1.6
-mypy==1.7.0
+numpy==1.26.4
