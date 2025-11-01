@@ -1,0 +1,88 @@
+[
+  {
+    "rule_id": "11111111-1111-1111-1111-111111111111",
+    "rule_type": "transaction_amount_threshold",
+    "jurisdiction": "SG",
+    "regulator": "MAS",
+    "severity": "high",
+    "description": "Escalate Singapore transactions above 10000 units of reported currency.",
+    "validation_status": "validated",
+    "is_active": true,
+    "effective_date": "2024-01-01T00:00:00Z",
+    "rule_data": {
+      "threshold_value": 10000,
+      "currency": null
+    }
+  },
+  {
+    "rule_id": "22222222-2222-2222-2222-222222222222",
+    "rule_type": "sanctions_screening",
+    "jurisdiction": null,
+    "regulator": null,
+    "severity": "critical",
+    "description": "Any payment with sanctions screening result requiring review must be escalated immediately.",
+    "validation_status": "validated",
+    "is_active": true,
+    "rule_data": {
+      "match_statuses": ["fail", "review", "potential_match", "hit"]
+    }
+  },
+  {
+    "rule_id": "33333333-3333-3333-3333-333333333333",
+    "rule_type": "high_risk_jurisdiction",
+    "jurisdiction": null,
+    "regulator": null,
+    "severity": "high",
+    "description": "Transactions involving FATF high-risk jurisdictions require legal review.",
+    "validation_status": "validated",
+    "is_active": true,
+    "rule_data": {
+      "high_risk_countries": ["IR", "KP", "SY", "MM"],
+      "match_direction": "either"
+    }
+  },
+  {
+    "rule_id": "44444444-4444-4444-4444-444444444444",
+    "rule_type": "currency_restriction",
+    "jurisdiction": null,
+    "regulator": null,
+    "severity": "medium",
+    "description": "Restricted currencies must be manually approved.",
+    "validation_status": "validated",
+    "is_active": true,
+    "rule_data": {
+      "restricted_values": ["IRR", "KPW", "SYP"]
+    }
+  },
+  {
+    "rule_id": "55555555-5555-5555-5555-555555555555",
+    "rule_type": "pep_screening",
+    "jurisdiction": null,
+    "regulator": null,
+    "severity": "high",
+    "description": "Confirmed or high-risk PEP matches require compliance escalation.",
+    "validation_status": "validated",
+    "is_active": true,
+    "rule_data": {
+      "match_statuses": ["fail", "review", "confirmed", "high"]
+    }
+  },
+  {
+    "rule_id": "66666666-6666-6666-6666-666666666666",
+    "rule_type": "missing_required_fields",
+    "jurisdiction": null,
+    "regulator": null,
+    "severity": "medium",
+    "description": "Mandatory payment fields must be populated before release.",
+    "validation_status": "validated",
+    "is_active": true,
+    "rule_data": {
+      "required_fields": [
+        "originator_name",
+        "originator_account",
+        "beneficiary_name",
+        "beneficiary_account"
+      ]
+    }
+  }
+]
