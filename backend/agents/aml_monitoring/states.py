@@ -17,6 +17,8 @@ class RiskAnalysisState(TypedDict):
     # Input
     transactions: list[dict]  # TransactionRecords as dicts
     rules_data: dict | None  # RulesData as dict (optional, FR-012)
+    compliance_rules: list[dict] | None
+    current_payment: dict | None
 
     # Intermediate
     formatted_prompt: str | None

@@ -160,6 +160,8 @@ When implementing features:
 ## Active Technologies
 - Python 3.11+ + FastAPI, LangGraph, Grok Kimi 2 LLM client, Pydantic, pandas (CSV processing) (001-payment-history-analysis)
 - CSV file (`transactions_mock_1000_for_participants.csv`) - read-only access (001-payment-history-analysis)
+- Python 3.11+ + FastAPI 0.100+, LangGraph 0.1+, Pydantic (schema validation), Groq API with Kimi K2-0905 model, pandas (transaction analysis) (004-rules-payment-integration)
+- Supabase PostgreSQL (transaction history, AML rules, verdicts, alerts, audit logs) (004-rules-payment-integration)
 
 ## Recent Changes
 - 001-payment-history-analysis: Added Python 3.11+ + FastAPI, LangGraph, Grok Kimi 2 LLM client, Pydantic, pandas (CSV processing)

@@ -10,7 +10,7 @@ from typing import Any
 from groq import Groq
 from groq.types.chat import ChatCompletion
 
-from config import settings
+from backend.core.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -71,10 +71,12 @@ class GroqClient:
         # Execute with retry logic
         for attempt in range(self.max_retries):
             try:
-                completion: ChatCompletion = self.client.chat.completions.create(
+                completion: ChatCompletion = await asyncio.to_thread(
+                    self.client.chat.completions.create,
                     model=self.model,
                     messages=messages,
                     temperature=0.3,  # Lower temperature for more consistent output
+                    response_format={"type": "json_object"},
                 )
 
                 content = completion.choices[0].message.content
@@ -82,7 +84,14 @@ class GroqClient:
 
                 # Parse JSON content
                 import json
-                analysis_result = json.loads(content)
+                try:
+                    analysis_result = json.loads(content)
+                except json.JSONDecodeError:
+                    logger.warning(
+                        "LLM returned non-JSON response",
+                        extra={"content_preview": content[:200]}
+                    )
+                    raise
                 return analysis_result
 
             except Exception as e:
