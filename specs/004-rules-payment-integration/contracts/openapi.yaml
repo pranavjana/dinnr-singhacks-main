@@ -1,0 +1,761 @@
+openapi: 3.1.0
+info:
+  title: Payment Analysis API
+  description: |
+    AML payment analysis API integrating rule checking and pattern detection.
+    Provides real-time risk assessment with verdict assignment and team routing.
+  version: 1.0.0
+  contact:
+    name: DINNR AML Platform Team
+    email: team@dinnr-aml.example.com
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+  - url: https://api-staging.dinnr-aml.example.com
+    description: Staging environment
+  - url: https://api.dinnr-aml.example.com
+    description: Production environment
+
+tags:
+  - name: Payment Analysis
+    description: Analyze payments for AML risk
+  - name: Verdicts
+    description: Retrieve and query analysis results
+  - name: Alerts
+    description: Manage flagged payments
+  - name: Reports
+    description: Generate analysis reports
+  - name: Health
+    description: Service health and metrics
+
+paths:
+  /api/v1/payments/analyze:
+    post:
+      tags:
+        - Payment Analysis
+      summary: Analyze payment for AML risk
+      description: |
+        Submit a payment transaction for comprehensive AML risk assessment.
+        Combines rule checking (feature 003) and pattern detection (feature 001)
+        to assign a verdict (pass/suspicious/fail) and route to appropriate team.
+      operationId: analyzePayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentTransaction'
+            examples:
+              normal_payment:
+                summary: Normal payment (expected: pass)
+                value:
+                  originator_name: "Jennifer Parker"
+                  originator_account: "GB39OOLA52427580832378"
+                  originator_country: "GB"
+                  beneficiary_name: "George Brown"
+                  beneficiary_account: "GB88KUDJ48147748190437"
+                  beneficiary_country: "SG"
+                  amount: 5000.00
+                  currency: "USD"
+                  transaction_date: "2025-11-01T10:30:00Z"
+                  value_date: "2025-11-01T10:30:00Z"
+                  swift_message_type: "MT103"
+                  sanctions_screening_result: "PASS"
+              suspicious_velocity:
+                summary: High velocity (expected: suspicious)
+                value:
+                  originator_name: "Jennifer Parker"
+                  originator_account: "GB39OOLA52427580832378"
+                  originator_country: "GB"
+                  beneficiary_name: "George Brown"
+                  beneficiary_account: "GB88KUDJ48147748190437"
+                  beneficiary_country: "SG"
+                  amount: 8000.00
+                  currency: "USD"
+                  transaction_date: "2025-11-01T10:30:00Z"
+                  value_date: "2025-11-01T10:30:00Z"
+                  swift_message_type: "MT103"
+                  sanctions_screening_result: "PASS"
+      responses:
+        '200':
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResult'
+              examples:
+                pass_verdict:
+                  summary: Pass verdict
+                  value:
+                    payment_id: "123e4567-e89b-12d3-a456-426614174000"
+                    trace_id: "789e4567-e89b-12d3-a456-426614174111"
+                    verdict: "pass"
+                    assigned_team: "compliance"
+                    risk_score: 15
+                    justification: "No rule violations or suspicious patterns detected. Transaction within normal parameters."
+                    analysis_duration_ms: 380
+                    triggered_rules: []
+                    detected_patterns: []
+                suspicious_verdict:
+                  summary: Suspicious verdict
+                  value:
+                    payment_id: "123e4567-e89b-12d3-a456-426614174000"
+                    trace_id: "789e4567-e89b-12d3-a456-426614174111"
+                    verdict: "suspicious"
+                    assigned_team: "compliance"
+                    risk_score: 45
+                    justification: "Detected velocity anomaly: 8 transactions in 7 days (5σ above baseline). No explicit rule violations."
+                    analysis_duration_ms: 450
+                    triggered_rules: []
+                    detected_patterns:
+                      - pattern_type: "velocity"
+                        confidence: 0.85
+                        description: "Abnormal transaction frequency detected"
+                    alert_id: "456e4567-e89b-12d3-a456-426614174222"
+        '400':
+          description: Invalid payment data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "ValidationError"
+                message: "Invalid currency code: XYZ"
+                details:
+                  field: "currency"
+                  constraint: "Must be ISO 4217 code"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "InternalServerError"
+                message: "Analysis failed due to system error"
+                trace_id: "789e4567-e89b-12d3-a456-426614174111"
+        '503':
+          description: Service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "ServiceUnavailable"
+                message: "Database connection unavailable. Please retry."
+
+  /api/v1/verdicts/{verdict_id}:
+    get:
+      tags:
+        - Verdicts
+      summary: Get verdict by ID
+      operationId: getVerdict
+      parameters:
+        - name: verdict_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Verdict found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Verdict'
+        '404':
+          description: Verdict not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/verdicts:
+    get:
+      tags:
+        - Verdicts
+      summary: Query verdicts
+      description: Filter verdicts by date range, verdict type, team, etc.
+      operationId: queryVerdicts
+      parameters:
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: verdict
+          in: query
+          schema:
+            type: string
+            enum: [pass, suspicious, fail]
+        - name: assigned_team
+          in: query
+          schema:
+            type: string
+            enum: [front_office, compliance, legal]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        '200':
+          description: List of verdicts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verdicts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Verdict'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+
+  /api/v1/alerts:
+    get:
+      tags:
+        - Alerts
+      summary: List alerts
+      description: Retrieve alerts filtered by team, priority, status
+      operationId: listAlerts
+      parameters:
+        - name: assigned_team
+          in: query
+          schema:
+            type: string
+            enum: [front_office, compliance, legal]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, under_review, resolved, escalated]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 500
+      responses:
+        '200':
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Alert'
+
+  /api/v1/alerts/{alert_id}:
+    get:
+      tags:
+        - Alerts
+      summary: Get alert details
+      operationId: getAlert
+      parameters:
+        - name: alert_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Alert found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '404':
+          description: Alert not found
+
+    patch:
+      tags:
+        - Alerts
+      summary: Update alert status
+      description: Assign alert to user or update status
+      operationId: updateAlert
+      parameters:
+        - name: alert_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [pending, under_review, resolved, escalated]
+                assigned_to:
+                  type: string
+                  description: User ID
+                resolution_notes:
+                  type: string
+      responses:
+        '200':
+          description: Alert updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+
+  /api/v1/reports/payment/{payment_id}:
+    get:
+      tags:
+        - Reports
+      summary: Generate payment analysis report
+      description: Comprehensive report with verdict, rules, patterns, recommendations
+      operationId: getPaymentReport
+      parameters:
+        - name: payment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentReport'
+
+  /api/v1/reports/aggregate:
+    get:
+      tags:
+        - Reports
+      summary: Generate aggregate report
+      description: Summary of verdicts, patterns, teams over time period
+      operationId: getAggregateReport
+      parameters:
+        - name: start_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Aggregate report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AggregateReport'
+
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  dependencies:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        enum: [healthy, degraded, unavailable]
+                      groq_api:
+                        type: string
+                        enum: [healthy, degraded, unavailable]
+
+  /metrics:
+    get:
+      tags:
+        - Health
+      summary: Prometheus metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Metrics in Prometheus format
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    PaymentTransaction:
+      type: object
+      required:
+        - originator_name
+        - originator_account
+        - originator_country
+        - beneficiary_name
+        - beneficiary_account
+        - beneficiary_country
+        - amount
+        - currency
+        - transaction_date
+        - value_date
+        - swift_message_type
+      properties:
+        originator_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        originator_account:
+          type: string
+          minLength: 1
+          maxLength: 50
+        originator_country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          description: ISO 3166-1 alpha-2
+        beneficiary_name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        beneficiary_account:
+          type: string
+          minLength: 1
+          maxLength: 50
+        beneficiary_country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+        amount:
+          type: number
+          format: double
+          minimum: 0.01
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: ISO 4217 currency code
+        transaction_date:
+          type: string
+          format: date-time
+        value_date:
+          type: string
+          format: date-time
+        swift_message_type:
+          type: string
+          pattern: '^MT\d{3}$'
+        ordering_institution:
+          type: string
+          maxLength: 200
+        beneficiary_institution:
+          type: string
+          maxLength: 200
+        sanctions_screening_result:
+          type: string
+          enum: [PASS, FAIL, REVIEW]
+        pep_screening_result:
+          type: string
+          enum: [PASS, FAIL, REVIEW]
+
+    AnalysisResult:
+      type: object
+      required:
+        - payment_id
+        - trace_id
+        - verdict
+        - assigned_team
+        - risk_score
+        - justification
+        - analysis_duration_ms
+      properties:
+        payment_id:
+          type: string
+          format: uuid
+        trace_id:
+          type: string
+          format: uuid
+        verdict:
+          type: string
+          enum: [pass, suspicious, fail]
+        assigned_team:
+          type: string
+          enum: [front_office, compliance, legal]
+        risk_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        justification:
+          type: string
+          minLength: 10
+        analysis_duration_ms:
+          type: integer
+          minimum: 1
+        triggered_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TriggeredRuleSummary'
+        detected_patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectedPatternSummary'
+        alert_id:
+          type: string
+          format: uuid
+          description: Present if verdict is suspicious or fail
+
+    Verdict:
+      allOf:
+        - $ref: '#/components/schemas/AnalysisResult'
+        - type: object
+          properties:
+            verdict_id:
+              type: string
+              format: uuid
+            analysis_timestamp:
+              type: string
+              format: date-time
+
+    Alert:
+      type: object
+      required:
+        - alert_id
+        - verdict_id
+        - payment_id
+        - assigned_team
+        - priority
+        - status
+        - investigation_steps
+        - created_at
+      properties:
+        alert_id:
+          type: string
+          format: uuid
+        verdict_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        assigned_team:
+          type: string
+          enum: [front_office, compliance, legal]
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        status:
+          type: string
+          enum: [pending, under_review, resolved, escalated]
+        triggered_rule_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        detected_pattern_types:
+          type: array
+          items:
+            type: string
+        investigation_steps:
+          type: array
+          items:
+            type: string
+          minItems: 1
+        created_at:
+          type: string
+          format: date-time
+        assigned_to:
+          type: string
+        resolved_at:
+          type: string
+          format: date-time
+        resolution_notes:
+          type: string
+
+    TriggeredRuleSummary:
+      type: object
+      properties:
+        rule_id:
+          type: string
+          format: uuid
+        rule_type:
+          type: string
+        jurisdiction:
+          type: string
+        regulator:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+
+    DetectedPatternSummary:
+      type: object
+      properties:
+        pattern_type:
+          type: string
+          enum: [structuring, velocity, jurisdictional, round_tripping, layering]
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        description:
+          type: string
+
+    PaymentReport:
+      type: object
+      properties:
+        report_id:
+          type: string
+          format: uuid
+        payment_id:
+          type: string
+          format: uuid
+        trace_id:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        verdict:
+          type: string
+          enum: [pass, suspicious, fail]
+        assigned_team:
+          type: string
+          enum: [front_office, compliance, legal]
+        risk_score:
+          type: number
+        triggered_rules:
+          type: array
+          items:
+            $ref: '#/components/schemas/TriggeredRuleSummary'
+        detected_patterns:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetectedPatternSummary'
+        recommendations:
+          type: array
+          items:
+            type: string
+        audit_metadata:
+          type: object
+          properties:
+            llm_model:
+              type: string
+            analysis_duration_ms:
+              type: integer
+            data_sources:
+              type: array
+              items:
+                type: string
+
+    AggregateReport:
+      type: object
+      properties:
+        report_period:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date-time
+            end_date:
+              type: string
+              format: date-time
+        summary:
+          type: object
+          properties:
+            total_payments_analyzed:
+              type: integer
+            verdicts_by_type:
+              type: object
+              properties:
+                pass:
+                  type: integer
+                suspicious:
+                  type: integer
+                fail:
+                  type: integer
+            alerts_by_team:
+              type: object
+              properties:
+                front_office:
+                  type: integer
+                compliance:
+                  type: integer
+                legal:
+                  type: integer
+        pattern_trends:
+          type: object
+          additionalProperties:
+            type: integer
+        rule_violations:
+          type: object
+          additionalProperties:
+            type: integer
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        trace_id:
+          type: string
+          format: uuid
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []
