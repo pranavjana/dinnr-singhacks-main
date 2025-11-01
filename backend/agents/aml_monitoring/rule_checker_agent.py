@@ -4,10 +4,18 @@ Evaluates payment transactions against active AML/CFT rules.
 """
 from typing import Dict, Any, List
 
-from backend.core.config import settings
-from backend.core.observability import get_logger
-from backend.services.rules_service import rules_service
-from backend.agents.aml_monitoring.state_schemas import PaymentAnalysisState
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.config import settings
+    from backend.core.observability import get_logger
+    from backend.services.rules_service import rules_service
+    from backend.agents.aml_monitoring.state_schemas import PaymentAnalysisState
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.config import settings
+    from core.observability import get_logger
+    from services.rules_service import rules_service
+    from agents.aml_monitoring.state_schemas import PaymentAnalysisState
 
 logger = get_logger(__name__)
 

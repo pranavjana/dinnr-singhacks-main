@@ -4,8 +4,14 @@ Implements deterministic verdict calculation based on risk scores.
 """
 from typing import Dict, Any
 
-from backend.core.observability import get_logger
-from backend.agents.aml_monitoring.state_schemas import PaymentAnalysisState
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.observability import get_logger
+    from backend.agents.aml_monitoring.state_schemas import PaymentAnalysisState
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.observability import get_logger
+    from agents.aml_monitoring.state_schemas import PaymentAnalysisState
 
 logger = get_logger(__name__)
 

@@ -11,18 +11,34 @@ from fastapi.responses import StreamingResponse
 from uuid import UUID
 from typing import Optional
 
-from backend.core.observability import get_logger, payment_analysis_total, analysis_latency_ms
-from backend.models.payment import PaymentTransaction
-from backend.agents.aml_monitoring.payment_analysis_agent import (
-    analyze_payment,
-    collect_related_transactions,
-    generate_streaming_analysis,
-)
-from backend.services.transaction_service import transaction_service
-from backend.services.rules_service import rules_service
-from backend.services.verdict_service import verdict_service
-from backend.services.alert_service import alert_service
-from backend.services.audit_service import audit_service
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.observability import get_logger, payment_analysis_total, analysis_latency_ms
+    from backend.models.payment import PaymentTransaction
+    from backend.agents.aml_monitoring.payment_analysis_agent import (
+        analyze_payment,
+        collect_related_transactions,
+        generate_streaming_analysis,
+    )
+    from backend.services.transaction_service import transaction_service
+    from backend.services.rules_service import rules_service
+    from backend.services.verdict_service import verdict_service
+    from backend.services.alert_service import alert_service
+    from backend.services.audit_service import audit_service
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.observability import get_logger, payment_analysis_total, analysis_latency_ms
+    from models.payment import PaymentTransaction
+    from agents.aml_monitoring.payment_analysis_agent import (
+        analyze_payment,
+        collect_related_transactions,
+        generate_streaming_analysis,
+    )
+    from services.transaction_service import transaction_service
+    from services.rules_service import rules_service
+    from services.verdict_service import verdict_service
+    from services.alert_service import alert_service
+    from services.audit_service import audit_service
 
 logger = get_logger(__name__)
 

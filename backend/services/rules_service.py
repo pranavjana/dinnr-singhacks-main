@@ -13,8 +13,14 @@ from uuid import UUID
 
 import httpx
 
-from backend.core.config import settings
-from backend.core.observability import get_logger
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.config import settings
+    from backend.core.observability import get_logger
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.config import settings
+    from core.observability import get_logger
 
 logger = get_logger(__name__)
 

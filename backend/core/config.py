@@ -52,19 +52,19 @@ class Settings(BaseSettings):
     metrics_port: int = 9090
     
     # CORS Configuration
-    cors_origins: str = "http://localhost:3000,http://localhost:8000"
-    
+    cors_origins: List[str] = ["http://localhost:3000", "http://localhost:8000"]
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore"  # Ignore extra fields from other features
     )
-    
+
     @property
     def cors_origins_list(self) -> List[str]:
-        """Convert CORS origins string to list."""
-        return [origin.strip() for origin in self.cors_origins.split(",")]
+        """Return CORS origins as list."""
+        return self.cors_origins
     
     @property
     def high_risk_jurisdictions_list(self) -> List[str]:

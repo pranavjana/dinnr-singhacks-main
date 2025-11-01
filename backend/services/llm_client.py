@@ -10,7 +10,12 @@ from typing import Any
 from groq import Groq
 from groq.types.chat import ChatCompletion
 
-from backend.core.config import settings
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.core.config import settings
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from core.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)

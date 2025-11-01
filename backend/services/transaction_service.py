@@ -10,9 +10,16 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 
-from backend.models.query_params import QueryParameters
-from backend.models.transaction import TransactionRecord, PaymentHistory
-from backend.core.config import settings
+try:
+    # Try backend-prefixed imports first (running from parent directory)
+    from backend.models.query_params import QueryParameters
+    from backend.models.transaction import TransactionRecord, PaymentHistory
+    from backend.core.config import settings
+except ModuleNotFoundError:
+    # Fall back to relative imports (running from backend directory)
+    from models.query_params import QueryParameters
+    from models.transaction import TransactionRecord, PaymentHistory
+    from core.config import settings
 
 # Configure logging
 logger = logging.getLogger(__name__)

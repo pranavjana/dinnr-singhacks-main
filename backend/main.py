@@ -10,12 +10,21 @@ import os
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.core.config import settings
-from backend.core.observability import (
-    get_logger,
-    get_metrics,
-    get_metrics_content_type
-)
+# Try both import styles (running from backend dir vs parent dir)
+try:
+    from backend.core.config import settings
+    from backend.core.observability import (
+        get_logger,
+        get_metrics,
+        get_metrics_content_type
+    )
+except ModuleNotFoundError:
+    from core.config import settings
+    from core.observability import (
+        get_logger,
+        get_metrics,
+        get_metrics_content_type
+    )
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -45,6 +54,14 @@ async def startup_event():
     logger.info(
         f"application_startup - environment={settings.environment}, log_level={settings.log_level}"
     )
+
+    # Debug: Print all registered routes
+    logger.info("=" * 50)
+    logger.info("Registered routes:")
+    for route in app.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            logger.info(f"  {route.methods} {route.path}")
+    logger.info("=" * 50)
 
 
 @app.on_event("shutdown")
@@ -97,13 +114,39 @@ async def root():
 
 
 # Register routers
-from backend.routers import payment_analysis
+try:
+    # Try both import styles (running from backend dir vs parent dir)
+    try:
+        from backend.routers import payment_analysis
+    except ModuleNotFoundError:
+        from routers import payment_analysis
 
-app.include_router(
-    payment_analysis.router,
-    prefix="/api/v1/payments",
-    tags=["Payment Analysis"]
-)
+    # Payment analysis endpoints
+    app.include_router(
+        payment_analysis.router,
+        prefix="/api/v1/payments",
+        tags=["Payment Analysis"]
+    )
+    logger.info("Payment analysis endpoints registered successfully at /api/v1/payments")
+except Exception as e:
+    logger.error(f"Failed to load payment analysis endpoints: {e}")
+    import traceback
+    traceback.print_exc()
+
+# Rule extraction endpoints (from src/api)
+try:
+    import sys
+    import os
+    src_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src')
+    if src_dir not in sys.path:
+        sys.path.insert(0, src_dir)
+
+    from api.rule_extraction import router as extraction_router
+    app.include_router(extraction_router, tags=["Rule Extraction"])
+    logger.info("Rule extraction endpoints registered successfully")
+except Exception as e:
+    logger.warning(f"Could not load rule extraction endpoints: {e}")
+    logger.info("Continuing without rule extraction endpoints...")
 
 
 if __name__ == "__main__":
