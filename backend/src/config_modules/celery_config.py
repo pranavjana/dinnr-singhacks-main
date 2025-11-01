@@ -2,13 +2,9 @@
 Celery and Redis configuration for background task processing
 """
 import logging
-import sys
-import os
 from celery import Celery
 from kombu import Exchange, Queue
 
-# Import settings from backend/config.py
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from config import settings
 
 logger = logging.getLogger(__name__)
