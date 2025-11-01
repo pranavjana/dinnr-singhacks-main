@@ -1,0 +1,30 @@
+{
+  "schema_version": "v1",
+  "decision": "FAIL",
+  "rule_codes": ["STR_TRIGGER"],
+  "action_ids": [
+    "CREATE_CASE",
+    "PLACE_SOFT_HOLD",
+    "ESCALATE_L2_AML",
+    "FILE_STR_DRAFT"
+  ],
+  "analysis_report": "Case flagged as fail after STR trigger was met on high-risk Russia corridor with layered deposits. Immediate containment requires case creation, soft hold, escalation to L2, and preparation of STR draft.",
+  "corridor": {
+    "origin_country": "RUS",
+    "destination_country": "SGP",
+    "channel": "SWIFT",
+    "currency": "USD"
+  },
+  "amount": 25000,
+  "behavioural_patterns": ["STRUCTURED_DEPOSITS"],
+  "evidence": [
+    {
+      "type": "transaction",
+      "id_hash": "FACEFEEDABCD1111",
+      "summary": "Fail decision due to STR trigger"
+    }
+  ],
+  "metadata": {
+    "customer_id_hash": "hash:fail9999"
+  }
+}

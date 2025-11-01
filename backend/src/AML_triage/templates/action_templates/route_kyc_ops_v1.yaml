@@ -1,0 +1,22 @@
+template_id: route_kyc_ops_v1
+version: 1.0.0
+locale: en
+channel: INTERNAL
+purpose: Assign missing KYC data tasks to KYC Ops queue
+when_to_use: Triggered when KYC_INCOMPLETE rule fires
+required_fields:
+  - customer_reference
+  - missing_items
+playbook_steps:
+  - Generate KYC Ops task with missing fields highlighted
+  - Include deadline and escalation path
+  - Attach related documents/evidence
+compliance_notes: Routine workflow; no approvals necessary
+rules:
+  - KYC_INCOMPLETE
+risk_levels:
+  - MEDIUM
+corridors:
+  - MEDIUM
+fewshot_examples:
+  - "Route to KYC Ops to obtain updated proof of address."

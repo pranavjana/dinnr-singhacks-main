@@ -1,0 +1,11 @@
+{
+  "CREATE_CASE": ["create_case_internal_v1"],
+  "REQUEST_SOF_DOCS": ["request_sof_docs_v1"],
+  "REQUEST_UBO_DOCS": ["request_ubo_docs_v1"],
+  "PLACE_SOFT_HOLD": ["place_soft_hold_notice_v1"],
+  "ESCALATE_L2_AML": ["escalate_l2_aml_v1"],
+  "ROUTE_KYC_OPS": ["route_kyc_ops_v1"],
+  "FILE_STR_DRAFT": ["file_str_draft_v1"],
+  "SEND_RM_BRIEF": ["rm_brief_sus_case_v1"],
+  "SEND_CUSTOMER_DOCREQ": ["customer_doc_request_v1"]
+}

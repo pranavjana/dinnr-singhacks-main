@@ -1,0 +1,15 @@
+**Executive Summary**
+The case triage-2025-11-01T12:03:17Z-9f2c has been flagged due to high-risk signals, including a high-risk corridor transaction from Singapore to Nigeria (GEO-02) and a rapid in/out pattern (BEH-05), warranting a high risk level. Given the customer's high risk profile and the medium client risk profile, it is recommended to request source-of-funds (SOF) documentation to gather more evidence. A temporary soft hold is also considered, but as a secondary measure, requiring Compliance/MLRO approval.
+
+**Recommended Actions:**
+* Request Source-of-Funds Documentation (REQUEST_SOF_DOCS): Send a pre-approved SOF customer request template (tmpl_req_sof_01) to collect documentary evidence on the origin of funds, with a confidence level of 0.86.
+* Place Temporary Soft Hold (PLACE_SOFT_HOLD): Submit a soft hold instruction through the account controls tool with a default 72-hour duration, pending Compliance/MLRO approval, with a confidence level of 0.44.
+
+**Alternative Actions and Rationale**
+The soft hold was deprioritized due to the account tenure being over 12 months, despite meeting the threshold. However, it is still considered a viable option if the customer fails to respond or provide incomplete evidence.
+
+**Risk Signals and Transaction Context**
+The high-risk corridor transaction and rapid in/out pattern justify the recommended actions, as they indicate potential money laundering activity. The customer's high risk profile and the medium client risk profile also contribute to the high risk level.
+
+**Next Steps**
+The reviewer should monitor the case for the customer's response to the SOF request and follow up within 5 business days. The reviewer should also confirm that the customer has not already submitted acceptable SOF documentation in the past 90 days and assess whether additional questions on transaction purpose are required. Outstanding evidence includes the customer's response to the SOF request and potential additional information on transaction purpose. A review reminder should be set before the soft hold expires, if implemented.

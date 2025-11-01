@@ -1,0 +1,16 @@
+{
+  "rationale": {
+    "decision": "FAIL",
+    "rules": [
+      "STR_TRIGGER"
+    ],
+    "corridorRisk": "HIGH",
+    "actions": [
+      "CREATE_CASE",
+      "PLACE_SOFT_HOLD",
+      "FILE_STR_DRAFT"
+    ],
+    "explanation": "The FAIL decision is triggered by the STR_TRIGGER rule, indicating a potential suspicious transaction. Given the HIGH corridor risk, a soft hold is placed to prevent further transactions while the case is being reviewed. A case is created to track the investigation, and a draft Suspicious Transaction Report (STR) is filed to comply with regulatory requirements."
+  },
+  "confidence": 0.8
+}

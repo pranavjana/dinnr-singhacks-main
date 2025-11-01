@@ -1,0 +1,25 @@
+template_id: customer_doc_request_v1
+version: 1.0.0
+locale: en
+channel: EMAIL
+purpose: Request additional documentation from customer via neutral tone template
+when_to_use: Use when SUS decision requires specific document collection from customer
+required_fields:
+  - customer_reference
+  - requested_documents
+  - submission_deadline
+playbook_steps:
+  - Address customer formally using template placeholders
+  - List documents required and secure submission steps
+  - Provide contact details for clarification
+compliance_notes: No free text additions; follow approved wording strictly
+rules:
+  - SOF_MISSING
+  - KYC_INCOMPLETE
+risk_levels:
+  - MEDIUM
+corridors:
+  - MEDIUM
+  - HIGH
+fewshot_examples:
+  - "Kindly upload the requested documents via the secure link within 5 business days."
