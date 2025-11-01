@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 3f7e9211-d7e4-4a73-b8ca-bf8b7b8a1682 has been flagged for further review due to a screening decision of SUS (Suspicious), warranting a comprehensive investigation to determine the legitimacy of the transactions. The recommended action path involves creating an investigation case, escalating it to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer. These steps are crucial in gathering more information to assess the risk level and make an informed decision.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, ensuring the case references the current trace ID and screening decision.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for specialist review, submitting an escalation request with a summary of detected patterns and open questions.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template and logging the outreach in the case journal.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary focus is on gathering more information through the creation of an investigation case, escalation to a specialist, and collection of source-of-funds documentation. These steps are essential in understanding the context and risk associated with the flagged transactions.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS indicates a need for further investigation. The recommended actions aim to address this by collecting more information and involving specialist reviewers.
+
+**Next Steps**
+The reviewer should monitor the case for updates, particularly the response to the source-of-funds documentation request, and follow up within 5 business days if necessary. The reviewer should also verify that the case is properly updated in the CaseWorks record and that the escalation request is submitted with all required information. Outstanding evidence includes the source-of-funds documentation and any additional information that may be required to assess the risk level of the transactions. A review of the case should be conducted within 10 business days to determine the next course of action based on the information gathered.

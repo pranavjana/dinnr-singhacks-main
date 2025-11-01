@@ -116,12 +116,6 @@ async def extract_rules(request: ExtractionRequest):
         raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
 
 
-@router.options("/extract/batch")
-async def options_extract_batch():
-    """Handle CORS preflight for batch extraction endpoint."""
-    return {}
-
-
 @router.post("/extract/batch", response_model=BatchExtractionResponse)
 async def extract_rules_batch_endpoint(
     request: BatchExtractionRequest,
@@ -177,12 +171,6 @@ async def extract_rules_batch_endpoint(
     except Exception as e:
         logger.error("Batch extraction failed", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"Batch extraction failed: {str(e)}")
-
-
-@router.options("/rules")
-async def options_compliance_rules():
-    """Handle CORS preflight for rules endpoint."""
-    return {}
 
 
 @router.get("/rules")

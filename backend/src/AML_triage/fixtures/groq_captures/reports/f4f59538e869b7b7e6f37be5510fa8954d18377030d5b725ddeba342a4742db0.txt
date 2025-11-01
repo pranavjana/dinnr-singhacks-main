@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 692acba9-e1ee-40bc-9ed6-7250d1774216 has been flagged with a decision of SUS, indicating a potential risk that requires further investigation. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case, escalate to a Level 2 AML analyst for deeper analysis, and request source-of-funds documentation to gather more information. The recommended actions will help determine the legitimacy of the transactions and ensure compliance with AML regulations.
+
+**Recommended Actions**
+* Create an investigation case (CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (ESCALATE_L2_AML) for deeper analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information about the transactions and the customer. The recommended actions are prioritized due to the lack of available data and the need for a thorough investigation.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the SUS decision indicates a potential risk that requires further investigation. The recommended actions will help identify potential risk signals and provide context for the transactions.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request. A follow-up review is recommended within 10 business days to assess the progress of the investigation and determine if additional actions are required. Outstanding evidence, such as the transaction snapshot and profile considerations, should be obtained to support the investigation. The reviewer should also verify that the case is properly documented and updated in the CaseWorks record.
