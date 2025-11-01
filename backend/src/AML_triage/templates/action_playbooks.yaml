@@ -40,7 +40,7 @@ ESCALATE_L2_AML:
     - "Highlight any looming deadlines (STR filing, onboarding hold) for prioritisation."
   reviewer_checks:
     - "Confirm the L2 queue capacity or identify a named analyst if required by SOP."
-  approvals: "No approvals required but escalation rationale must be documented."
+  approvals: "No approvals required."
 
 REQUEST_UBO_DOCS:
   title: "Request Ultimate Beneficial Owner Documentation"

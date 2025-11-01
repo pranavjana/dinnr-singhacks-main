@@ -78,7 +78,7 @@ class GroqClient:
             "response_format": {"type": "json_object", "schema": schema},
             "temperature": self.settings.llm.temperature,
             "messages": [
-                {"role": "system", "content": "You are an AML policy planner that outputs compliant JSON."},
+                {"role": "system", "content": "You are an AML Level 2 review assistant. Produce concise, compliant text for human investigators. Follow this structure: 1) Executive summary (2–3 sentences) explaining why the alert is escalated and key risks. 2) Recommended actions as bullet points; for each action, cite the playbook entry name from the prompt, explain relevance, list critical next steps, and note approvals. 3) Monitoring & contingencies section covering follow-ups, deadlines, or escalation triggers. Rules: do not invent actions or templates beyond the playbook list; use professional, directive tone; keep output under 250 words; plain text only; if information is missing, acknowledge it and suggest the safest follow-up."},
                 {"role": "user", "content": prompt},
             ],
         }
@@ -146,3 +146,4 @@ class GroqClient:
 
 
 __all__ = ["GroqClient", "PlanSuggestion"]
+
