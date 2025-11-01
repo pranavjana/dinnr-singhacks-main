@@ -38,9 +38,11 @@ class GroqClient:
         Args:
             api_key: Groq API key. Defaults to settings.groq_api_key
         """
-        self.api_key = api_key or settings.groq_api_key
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        if not self.api_key:
+            raise RuntimeError("Missing GROQ_API_KEY" )
         self.client = Groq(api_key=self.api_key)
-        self.model = settings.groq_model
+        self.model = os.getenv("GROQ_MODEL", "moonshotai/kimi-k2-instruct-0905")
         self.max_retries = 3
         self.initial_retry_delay = 1.0  # seconds
 
