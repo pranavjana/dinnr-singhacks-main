@@ -9,8 +9,8 @@ from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
 from src.db.connection import test_connection as test_db_connection
-from src.config.celery_config import test_redis_connection
-from src.config.gemini_config import validate_api_key
+from config_modules.celery_config import test_redis_connection
+from config_modules.gemini_config import validate_api_key
 from src.metrics import get_metrics, get_metrics_content_type
 from src.models.schemas import HealthCheckResponse
 
