@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID bc471133-a900-45ba-acf7-5ab7ffeb28f3 has been flagged for further investigation due to a screening decision of SUS (Suspicious). Given the lack of provided signals, profile considerations, and transaction snapshot, a cautious approach is recommended. The suggested action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer. These steps aim to gather more information and assess the risk associated with the flagged transactions.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, ensuring the case references the current trace ID and screening decision.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for specialist review, submitting an escalation request with a summary of detected patterns and open questions.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template and logging the outreach in the case journal.
+
+**Alternative Actions and Considerations**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information about the flagged transactions. However, if the customer fails to respond or provides incomplete evidence, the case may need to be escalated further.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS indicates a potential risk that warrants further investigation. The recommended actions aim to mitigate this risk by gathering more information and assessing the origin of funds for the flagged transactions.
+
+**Next Steps**
+The reviewer should monitor the case for the customer's response to the source-of-funds documentation request and follow up within 5 business days if no response is received. The reviewer should also verify that the case is properly updated in the internal case management system and that the escalation request is submitted to the appropriate queue. Outstanding evidence required includes the customer's response to the source-of-funds documentation request and any additional information that may be gathered during the investigation. A follow-up review is recommended within 10 business days to assess the progress of the investigation and determine if further actions are required.

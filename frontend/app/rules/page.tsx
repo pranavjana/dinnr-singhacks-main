@@ -18,7 +18,19 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { MultiStepLoader } from "@/components/ui/multi-step-loader"
-import { RefreshCw, Shield, CheckCircle, XCircle, AlertCircle, Download } from "lucide-react"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { RefreshCw, Shield, CheckCircle, XCircle, AlertCircle, Download, ChevronDown, Check, Filter } from "lucide-react"
 import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
 import type {
@@ -59,10 +71,23 @@ export default function RulesPage() {
   const [isLoadingRules, setIsLoadingRules] = useState(false)
   const [lastExtractionResult, setLastExtractionResult] = useState<BatchExtractionResponse | null>(null)
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
+  const [expandedPendingRules, setExpandedPendingRules] = useState<Set<string>>(new Set())
+  const [approvingRules, setApprovingRules] = useState<Set<string>>(new Set())
 
-  // Load existing rules on mount
+  // Filter states for current rules
+  const [filterRuleType, setFilterRuleType] = useState<string>('all')
+  const [filterJurisdiction, setFilterJurisdiction] = useState<string>('all')
+  const [filterRegulator, setFilterRegulator] = useState<string>('all')
+
+  // Filter states for pending rules
+  const [pendingFilterRuleType, setPendingFilterRuleType] = useState<string>('all')
+  const [pendingFilterJurisdiction, setPendingFilterJurisdiction] = useState<string>('all')
+  const [pendingFilterRegulator, setPendingFilterRegulator] = useState<string>('all')
+
+  // Load existing rules and audit trail on mount
   useEffect(() => {
     loadRules()
+    loadAuditTrail()
   }, [])
 
   const loadRules = async () => {
@@ -81,6 +106,46 @@ export default function RulesPage() {
       })
     } finally {
       setIsLoadingRules(false)
+    }
+  }
+
+  const loadAuditTrail = async () => {
+    try {
+      const response = await api.getAuditTrail(100) as { entries: any[] }
+
+      // Convert database entries to AuditLogEntry format
+      const entries: AuditLogEntry[] = response.entries.map(entry => ({
+        id: entry.id,
+        timestamp: new Date(entry.timestamp),
+        dateUpdated: entry.date_updated ? new Date(entry.date_updated) : new Date(entry.timestamp),
+        action: entry.action,
+        user: entry.user_name,
+        rulesCreated: entry.rules_created,
+        rulesUpdated: entry.rules_updated,
+        status: entry.status as 'success' | 'failed',
+        details: entry.details || ''
+      }))
+
+      setAuditLog(entries)
+    } catch (error) {
+      console.error('Failed to load audit trail:', error)
+      // Don't show error toast for audit trail loading failure
+    }
+  }
+
+  const saveAuditEntry = async (entry: Omit<AuditLogEntry, 'id'>) => {
+    try {
+      await api.createAuditEntry({
+        action: entry.action,
+        user_name: entry.user,
+        rules_created: entry.rulesCreated,
+        rules_updated: entry.rulesUpdated,
+        status: entry.status,
+        details: entry.details
+      })
+    } catch (error) {
+      console.error('Failed to save audit entry:', error)
+      // Don't show error toast, just log it
     }
   }
 
@@ -122,6 +187,120 @@ export default function RulesPage() {
     })
   }
 
+  const togglePendingRule = (ruleId: string) => {
+    setExpandedPendingRules(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(ruleId)) {
+        newSet.delete(ruleId)
+      } else {
+        newSet.add(ruleId)
+      }
+      return newSet
+    })
+  }
+
+  const handleApproveRule = async (rule: ComplianceRule) => {
+    setApprovingRules(prev => new Set(prev).add(rule.id))
+    try {
+      await api.validateRule(rule.id, 'User') // You can replace 'User' with actual user name
+
+      toast.success("Rule approved", {
+        description: `${rule.rule_type} has been added to active rules`,
+      })
+
+      // Add to audit log and save to database
+      const approvalAuditEntry: AuditLogEntry = {
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        dateUpdated: new Date(),
+        action: 'Rule Approval',
+        user: 'User',
+        rulesCreated: 0,
+        rulesUpdated: 1,
+        status: 'success',
+        details: `Approved ${rule.rule_type} rule (${rule.jurisdiction})`
+      }
+      setAuditLog(prev => [approvalAuditEntry, ...prev])
+      await saveAuditEntry(approvalAuditEntry)
+
+      // Reload rules to reflect the change
+      await loadRules()
+    } catch (error) {
+      console.error('Failed to approve rule:', error)
+      toast.error("Error approving rule", {
+        description: error instanceof Error ? error.message : "Failed to validate rule",
+      })
+    } finally {
+      setApprovingRules(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(rule.id)
+        return newSet
+      })
+    }
+  }
+
+  // Get unique values for filters
+  const getUniqueRuleTypes = () => {
+    const types = new Set(rules.filter(r => r.validation_status === 'validated').map(r => r.rule_type))
+    return Array.from(types).sort()
+  }
+
+  const getUniqueJurisdictions = () => {
+    const jurisdictions = new Set(rules.filter(r => r.validation_status === 'validated').map(r => r.jurisdiction))
+    return Array.from(jurisdictions).sort()
+  }
+
+  const getUniqueRegulators = () => {
+    const regulators = new Set(rules.filter(r => r.validation_status === 'validated').map(r => r.regulator))
+    return Array.from(regulators).sort()
+  }
+
+  // Filter rules
+  const getFilteredRules = () => {
+    return rules
+      .filter(r => r.validation_status === 'validated')
+      .filter(r => filterRuleType === 'all' || r.rule_type === filterRuleType)
+      .filter(r => filterJurisdiction === 'all' || r.jurisdiction === filterJurisdiction)
+      .filter(r => filterRegulator === 'all' || r.regulator === filterRegulator)
+  }
+
+  const clearFilters = () => {
+    setFilterRuleType('all')
+    setFilterJurisdiction('all')
+    setFilterRegulator('all')
+  }
+
+  // Get unique values for pending filters
+  const getUniquePendingRuleTypes = () => {
+    const types = new Set(rules.filter(r => r.validation_status === 'pending').map(r => r.rule_type))
+    return Array.from(types).sort()
+  }
+
+  const getUniquePendingJurisdictions = () => {
+    const jurisdictions = new Set(rules.filter(r => r.validation_status === 'pending').map(r => r.jurisdiction))
+    return Array.from(jurisdictions).sort()
+  }
+
+  const getUniquePendingRegulators = () => {
+    const regulators = new Set(rules.filter(r => r.validation_status === 'pending').map(r => r.regulator))
+    return Array.from(regulators).sort()
+  }
+
+  // Filter pending rules
+  const getFilteredPendingRules = () => {
+    return rules
+      .filter(r => r.validation_status === 'pending')
+      .filter(r => pendingFilterRuleType === 'all' || r.rule_type === pendingFilterRuleType)
+      .filter(r => pendingFilterJurisdiction === 'all' || r.jurisdiction === pendingFilterJurisdiction)
+      .filter(r => pendingFilterRegulator === 'all' || r.regulator === pendingFilterRegulator)
+  }
+
+  const clearPendingFilters = () => {
+    setPendingFilterRuleType('all')
+    setPendingFilterJurisdiction('all')
+    setPendingFilterRegulator('all')
+  }
+
   const handleGenerateRules = async () => {
     setIsGenerating(true)
     try {
@@ -145,7 +324,7 @@ export default function RulesPage() {
         const totalRulesCreated = response.results.reduce((sum, r) => sum + r.rules_created, 0)
         const totalCost = response.results.reduce((sum, r) => sum + r.cost_usd, 0)
         
-        // Add to audit log
+        // Add to audit log and save to database
         const newAuditEntry: AuditLogEntry = {
           id: crypto.randomUUID(),
           timestamp: new Date(),
@@ -158,6 +337,7 @@ export default function RulesPage() {
           details: `Successfully extracted ${totalRulesCreated} rules from ${response.successful} document(s). Jurisdiction: SG, Types: threshold, deadline, edd_trigger`
         }
         setAuditLog(prev => [newAuditEntry, ...prev])
+        await saveAuditEntry(newAuditEntry)
 
         toast.success("Rules generated successfully", {
           description: `Extracted ${totalRulesCreated} new rules from ${response.successful} document(s)`,
@@ -166,7 +346,7 @@ export default function RulesPage() {
         // Reload rules to show the new ones
         await loadRules()
       } else {
-        // Add failed audit entry
+        // Add failed audit entry and save to database
         const failedAuditEntry: AuditLogEntry = {
           id: crypto.randomUUID(),
           timestamp: new Date(),
@@ -179,13 +359,14 @@ export default function RulesPage() {
           details: `Failed to extract rules from ${response.failed} document(s)`
         }
         setAuditLog(prev => [failedAuditEntry, ...prev])
+        await saveAuditEntry(failedAuditEntry)
 
         toast.error("Rule extraction completed with errors", {
           description: `Failed to extract rules from ${response.failed} document(s)`,
         })
       }
     } catch (error) {
-      // Add error audit entry
+      // Add error audit entry and save to database
       const errorAuditEntry: AuditLogEntry = {
         id: crypto.randomUUID(),
         timestamp: new Date(),
@@ -198,6 +379,7 @@ export default function RulesPage() {
         details: `Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`
       }
       setAuditLog(prev => [errorAuditEntry, ...prev])
+      await saveAuditEntry(errorAuditEntry)
 
       console.error('Failed to generate rules:', error)
       toast.error("Error generating rules", {
@@ -269,7 +451,7 @@ export default function RulesPage() {
                 <div className="rounded-lg border bg-card p-6">
                   <p className="text-muted-foreground">Loading rules...</p>
                 </div>
-              ) : rules.length === 0 ? (
+              ) : rules.filter(r => r.validation_status === 'validated').length === 0 ? (
                 <div className="rounded-lg border bg-card p-6">
                   <h3 className="text-lg font-semibold mb-4">Active Compliance Rules</h3>
                   <p className="text-muted-foreground">
@@ -277,30 +459,86 @@ export default function RulesPage() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {rules.filter(r => r.validation_status === 'validated').map((rule) => (
-                    <div key={rule.id} className="rounded-lg border bg-card p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-green-500" />
-                          <h4 className="font-semibold">{rule.rule_type}</h4>
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                            {rule.jurisdiction}
-                          </span>
+                <>
+                  {/* Filter Section */}
+                  <div className="flex items-center gap-3 w-full">
+                    <Select value={filterRuleType} onValueChange={setFilterRuleType}>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="All types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {getUniqueRuleTypes().map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filterJurisdiction} onValueChange={setFilterJurisdiction}>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="All jurisdictions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Jurisdictions</SelectItem>
+                        {getUniqueJurisdictions().map(jurisdiction => (
+                          <SelectItem key={jurisdiction} value={jurisdiction}>{jurisdiction}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={filterRegulator} onValueChange={setFilterRegulator}>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="All regulators" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Regulators</SelectItem>
+                        {getUniqueRegulators().map(regulator => (
+                          <SelectItem key={regulator} value={regulator}>{regulator}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {(filterRuleType !== 'all' || filterJurisdiction !== 'all' || filterRegulator !== 'all') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="text-xs h-9 whitespace-nowrap"
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Rules List */}
+                  <div className="space-y-3">
+                    {getFilteredRules().length === 0 ? (
+                      <div className="rounded-lg border bg-card p-6 text-center">
+                        <p className="text-muted-foreground">No rules match the selected filters.</p>
+                      </div>
+                    ) : (
+                      getFilteredRules().map((rule) => (
+                        <div key={rule.id} className="rounded-lg border bg-card p-4">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-5 w-5 text-green-500" />
+                              <h4 className="font-semibold">{rule.rule_type}</h4>
+                              <span className="text-xs bg-green-500/20 text-green-700 dark:text-green-300 px-2 py-1 rounded-md">
+                                {rule.jurisdiction}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{rule.source_text}</p>
+                          <div className="flex gap-2 text-xs text-muted-foreground">
+                            <span>Regulator: {rule.regulator}</span>
+                            {rule.circular_number && <span>• {rule.circular_number}</span>}
+                            {rule.effective_date && <span>• Effective: {new Date(rule.effective_date).toLocaleDateString()}</span>}
+                          </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          Confidence: {(rule.extraction_confidence * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2">{rule.source_text}</p>
-                      <div className="flex gap-2 text-xs text-muted-foreground">
-                        <span>Regulator: {rule.regulator}</span>
-                        {rule.circular_number && <span>• {rule.circular_number}</span>}
-                        {rule.effective_date && <span>• Effective: {new Date(rule.effective_date).toLocaleDateString()}</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                      ))
+                    )}
+                  </div>
+                </>
               )}
             </TabsContent>
 
@@ -309,39 +547,162 @@ export default function RulesPage() {
                 <div className="rounded-lg border bg-card p-6">
                   <p className="text-muted-foreground">Loading rules...</p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {rules.filter(r => r.validation_status === 'pending').length === 0 ? (
-                    <div className="rounded-lg border bg-card p-6">
-                      <h3 className="text-lg font-semibold mb-4">Pending Rule Updates</h3>
-                      <p className="text-muted-foreground">
-                        No pending compliance rule updates at this time.
-                      </p>
-                    </div>
-                  ) : (
-                    rules.filter(r => r.validation_status === 'pending').map((rule) => (
-                      <div key={rule.id} className="rounded-lg border bg-card p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <AlertCircle className="h-5 w-5 text-yellow-500" />
-                            <h4 className="font-semibold">{rule.rule_type}</h4>
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                              {rule.jurisdiction}
-                            </span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            Confidence: {(rule.extraction_confidence * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{rule.source_text}</p>
-                        <div className="flex gap-2 text-xs text-muted-foreground">
-                          <span>Regulator: {rule.regulator}</span>
-                          {rule.circular_number && <span>• {rule.circular_number}</span>}
-                        </div>
-                      </div>
-                    ))
-                  )}
+              ) : rules.filter(r => r.validation_status === 'pending').length === 0 ? (
+                <div className="rounded-lg border bg-card p-6">
+                  <h3 className="text-lg font-semibold mb-4">Pending Rule Updates</h3>
+                  <p className="text-muted-foreground">
+                    No pending compliance rule updates at this time.
+                  </p>
                 </div>
+              ) : (
+                <>
+                  {/* Filter Section */}
+                  <div className="flex items-center gap-3 w-full">
+                    <Select value={pendingFilterRuleType} onValueChange={setPendingFilterRuleType}>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="All types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {getUniquePendingRuleTypes().map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={pendingFilterJurisdiction} onValueChange={setPendingFilterJurisdiction}>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="All jurisdictions" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Jurisdictions</SelectItem>
+                        {getUniquePendingJurisdictions().map(jurisdiction => (
+                          <SelectItem key={jurisdiction} value={jurisdiction}>{jurisdiction}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={pendingFilterRegulator} onValueChange={setPendingFilterRegulator}>
+                      <SelectTrigger className="h-9 flex-1">
+                        <SelectValue placeholder="All regulators" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Regulators</SelectItem>
+                        {getUniquePendingRegulators().map(regulator => (
+                          <SelectItem key={regulator} value={regulator}>{regulator}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {(pendingFilterRuleType !== 'all' || pendingFilterJurisdiction !== 'all' || pendingFilterRegulator !== 'all') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearPendingFilters}
+                        className="text-xs h-9 whitespace-nowrap"
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Pending Rules List */}
+                  <div className="space-y-3">
+                    {getFilteredPendingRules().length === 0 ? (
+                      <div className="rounded-lg border bg-card p-6 text-center">
+                        <p className="text-muted-foreground">No pending rules match the selected filters.</p>
+                      </div>
+                    ) : (
+                      getFilteredPendingRules().map((rule) => {
+                        const isExpanded = expandedPendingRules.has(rule.id)
+                        const isApproving = approvingRules.has(rule.id)
+                        const preview = rule.source_text.length > 100 ? rule.source_text.substring(0, 100) + '...' : rule.source_text
+
+                        return (
+                          <Collapsible
+                            key={rule.id}
+                            open={isExpanded}
+                            onOpenChange={() => togglePendingRule(rule.id)}
+                          >
+                            <div className="rounded-lg border bg-card hover:border-gray-400 dark:hover:border-gray-600 transition-colors">
+                              <div className="w-full p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                                    <AlertCircle className="h-5 w-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-semibold">{rule.rule_type}</h4>
+                                        <span className="text-xs bg-orange-500/20 text-orange-700 dark:text-orange-300 px-2 py-1 rounded-md">
+                                          {rule.jurisdiction}
+                                        </span>
+                                      </div>
+                                      <CollapsibleTrigger className="w-full text-left">
+                                        <p className={`text-sm text-muted-foreground ${isExpanded ? '' : 'truncate'}`}>
+                                          {isExpanded ? rule.source_text : preview}
+                                        </p>
+                                      </CollapsibleTrigger>
+                                    </div>
+                                  </div>
+                                  <CollapsibleTrigger>
+                                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </CollapsibleTrigger>
+                                </div>
+                              </div>
+
+                            <CollapsibleContent>
+                              <div className="px-4 pb-4 space-y-4 border-t pt-4">
+
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-muted-foreground">Regulator:</span>
+                                    <p className="font-medium">{rule.regulator}</p>
+                                  </div>
+                                  {rule.circular_number && (
+                                    <div>
+                                      <span className="text-muted-foreground">Circular Number:</span>
+                                      <p className="font-medium">{rule.circular_number}</p>
+                                    </div>
+                                  )}
+                                  {rule.effective_date && (
+                                    <div>
+                                      <span className="text-muted-foreground">Effective Date:</span>
+                                      <p className="font-medium">{new Date(rule.effective_date).toLocaleDateString()}</p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                  <Button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleApproveRule(rule)
+                                    }}
+                                    disabled={isApproving}
+                                    className="gap-2"
+                                    size="sm"
+                                  >
+                                    {isApproving ? (
+                                      <>
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        Approving...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="h-4 w-4" />
+                                        Approve Rule
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
+                            </CollapsibleContent>
+                          </div>
+                        </Collapsible>
+                        )
+                      })
+                    )}
+                  </div>
+                </>
               )}
             </TabsContent>
 

@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 6f0e97bd-f0fb-47b3-a9e6-91df2f780073 has been flagged for further investigation due to a screening decision of SUS, indicating a potential risk that requires a more in-depth analysis. The recommended action path involves creating an investigation case, escalating it to a Level 2 AML analyst, and requesting source-of-funds documentation from the customer. These steps are necessary to gather more information, assess the risk, and determine the appropriate course of action.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for deeper analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions were considered, as the recommended actions are standard procedures for handling a flagged case. However, if the customer fails to respond or provides incomplete evidence, the case may be flagged for escalation, and additional actions may be necessary.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS indicates a potential risk that requires further investigation. The recommended actions are designed to gather more information and assess the risk.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request. A follow-up review is recommended within 10 business days to assess the progress of the investigation and determine if additional actions are necessary. Outstanding evidence required includes the customer's response to the source-of-funds documentation request and any additional information gathered during the investigation.
