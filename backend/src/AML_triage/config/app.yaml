@@ -1,0 +1,19 @@
+schema_version: v1
+strict_fields: true
+template_top_k: 2
+model_id: llama-3.3-70b-versatile
+offline_mode: true
+
+paths:
+  contracts_dir: src/AML_triage/contracts
+  templates_dir: src/AML_triage/templates
+  fixtures_dir: src/AML_triage/fixtures
+  logs_dir: logs
+
+http:
+  timeout_seconds: 30
+  max_retries: 3
+
+llm:
+  temperature: 0.1
+  max_output_tokens: 2048

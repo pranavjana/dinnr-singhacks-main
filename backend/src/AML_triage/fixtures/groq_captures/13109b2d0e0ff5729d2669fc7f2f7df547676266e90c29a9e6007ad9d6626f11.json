@@ -1,0 +1,20 @@
+{
+  "rationale": {
+    "decision": "SUS",
+    "rules": [
+      "SOF_MISSING",
+      "AML_COMPLEX"
+    ],
+    "corridorRisk": "HIGH",
+    "actions": [
+      "CREATE_CASE",
+      "REQUEST_SOF_DOCS",
+      "PLACE_SOFT_HOLD",
+      "ESCALATE_L2_AML",
+      "SEND_RM_BRIEF",
+      "SEND_CUSTOMER_DOCREQ"
+    ],
+    "explanation": "The combination of missing Source of Funds (SOF) information and complex Anti-Money Laundering (AML) risk indicators, coupled with a high corridor risk, necessitates a Suspicious (SUS) decision. This triggers a series of actions to mitigate potential AML risks, including case creation, requesting SOF documents, placing a soft hold on the transaction, escalating to Level 2 AML for review, sending a brief to the Risk Manager, and requesting customer documentation to verify the legitimacy of the transaction."
+  },
+  "confidence": 0.8
+}

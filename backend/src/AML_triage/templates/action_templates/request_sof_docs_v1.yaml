@@ -1,0 +1,25 @@
+template_id: request_sof_docs_v1
+version: 1.0.0
+locale: en
+channel: EMAIL
+purpose: Request source-of-funds documentation from customer
+when_to_use: Triggered when SOF documentation missing or inconsistent with account profile
+required_fields:
+  - customer_reference
+  - rule_codes
+  - due_date
+playbook_steps:
+  - Reference rule code rationale
+  - List acceptable SOF documents
+  - Provide secure upload instructions
+compliance_notes: Keep tone neutral and reference existing policy clause only
+rules:
+  - SOF_MISSING
+  - SOF_MISMATCH
+risk_levels:
+  - MEDIUM
+corridors:
+  - HIGH
+  - MEDIUM
+fewshot_examples:
+  - "Please provide bank statements covering the last 6 months to substantiate source of funds."

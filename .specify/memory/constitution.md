@@ -1,16 +1,6 @@
 # DINNR AML Platform — Project Constitution
 
-<!--
-Sync Impact Report (v1.1.1 → v1.2.0): Added backend folder structure principle
-- Version: 1.1.1 → 1.2.0 (MINOR: new Principle VIII added)
-- Modified: None
-- Added: Principle VIII. Backend Organization & Folder Structure
-- Removed: None
-- Files pending updates:
-  ✅ .specify/templates/tasks-template.md (already references /backend path)
-  ✅ .specify/templates/plan-template.md (no breaking changes, structure-agnostic)
-  ⚠ Future features should reference /backend folder in task definitions
--->
+<!-- Sync Impact Report (v1.1.0 → v1.1.1): Specified Moonshot AI Kimi K2-0905 model via Groq API -->
 
 ## Core Principles
 
@@ -91,11 +81,6 @@ Next.js frontend must provide intuitive, role-specific dashboards with real-time
 **Monitoring**: Structured logging (JSON), Prometheus metrics, Langsmith for agent tracing, optional APM (e.g., Datadog, NewRelic if budget available).
 
 **Prohibited Technologies**: Unencrypted storage, plaintext credentials in code, closed-source compliance logic, vendor lock-in beyond Groq/Kimi, custom component libraries (use shadcn/ui), untyped code (TypeScript strict mode MANDATORY), model switching without constitution amendment.
-
-**Folder Structure Requirements**:
-- Backend development: `/backend/` directory exclusively (src, config, migrations, tests, agents, api)
-- Frontend development: `/frontend/` directory (or project root if single folder)
-- Backend and frontend must communicate via REST API only; no direct imports
 
 ## Development Workflow & Testing Discipline
 
@@ -184,4 +169,4 @@ All PRs must include a checklist item: `- [ ] Verified compliance with Constitut
 [GOVERNANCE_RULES]
 <!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
 
-**Version**: 1.2.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
+**Version**: 1.1.1 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01

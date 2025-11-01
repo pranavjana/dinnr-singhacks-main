@@ -1,0 +1,23 @@
+template_id: file_str_draft_v1
+version: 1.0.0
+locale: en
+channel: INTERNAL
+purpose: Draft Suspicious Transaction Report with key facts for MLRO approval
+when_to_use: Use when FAIL decision or STR_TRIGGER rule occurs
+required_fields:
+  - customer_reference
+  - incident_summary
+  - transaction_details
+playbook_steps:
+  - Populate STR template with chronological narrative
+  - Reference legal obligations for filing deadline
+  - Attach supporting evidence hashes and analyst contact
+compliance_notes: MLRO must approve before submission to regulator
+rules:
+  - STR_TRIGGER
+risk_levels:
+  - HIGH
+corridors:
+  - HIGH
+fewshot_examples:
+  - "Prepare STR draft covering suspicious transaction pattern and counterparties."
