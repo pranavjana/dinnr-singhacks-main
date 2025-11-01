@@ -1,0 +1,87 @@
+{
+  "schema": "llm3_to_llm4.action_recommendation.v1",
+  "schema_version": "v1",
+  "trace_id": "triage-2025-11-01T12:03:17Z-9f2c",
+  "decision": "SUS",
+  "risk_level": "high",
+  "signals": [
+    {
+      "rule_id": "GEO-02",
+      "title": "High-risk corridor",
+      "explanation": "Outbound payment along FATF high-risk corridor (SG→NG)."
+    },
+    {
+      "rule_id": "BEH-05",
+      "title": "Rapid in/out pattern",
+      "explanation": "Multiple credits followed by fast debit out within 48h."
+    }
+  ],
+  "profile_considerations": {
+    "client_risk_profile": "medium",
+    "customer_risk_profile": "high"
+  },
+  "primary_action": {
+    "action_id": "REQUEST_SOF_DOCS",
+    "template_id": "tmpl_req_sof_01",
+    "confidence": 0.86,
+    "approvals_required": false,
+    "preconditions_check": {
+      "met": true,
+      "details": [
+        "customer_risk_profile in [medium, high] → high ✓",
+        "amount ≥ 5,000 → 12,750 ✓",
+        "decision ∈ {SUS, FAIL} → SUS ✓"
+      ],
+      "missing_fields": []
+    },
+    "action_params": {
+      "case_title": "SOF requested due to HR corridor + rapid in/out",
+      "rule_codes": ["GEO-02", "BEH-05"],
+      "amount": 12750.0,
+      "currency": "USD",
+      "corridor": "SG→NG"
+    }
+  },
+  "alternatives": [
+    {
+      "action_id": "PLACE_SOFT_HOLD",
+      "template_id": "tmpl_soft_hold_01",
+      "confidence": 0.44,
+      "approvals_required": true,
+      "why_not_primary": "Threshold met but account tenure > 12 months; soft hold held in reserve."
+    }
+  ],
+  "txn_snapshot": {
+    "transaction_ref": "TXN-2025-10-31-00123",
+    "booking_datetime": "2025-10-31T09:42:10Z",
+    "amount": 12750.0,
+    "currency": "USD",
+    "channel": "Online",
+    "product_type": "Retail-Current",
+    "originator_name": "LEE AARON",
+    "originator_account_masked": "SG**4417",
+    "beneficiary_name": "OKOYE TRADING",
+    "beneficiary_account_masked": "NG**9921",
+    "countries": ["SG", "NG"],
+    "sanctions_screening": "clear",
+    "edd_required": false,
+    "edd_performed": false
+  },
+  "templates_used": ["tmpl_req_sof_01"],
+  "catalogue_constraints": {
+    "allowed_actions": [
+      "CREATE_CASE",
+      "REQUEST_SOF_DOCS",
+      "REQUEST_UBO_DOCS",
+      "PLACE_SOFT_HOLD",
+      "ESCALATE_L2_AML",
+      "ROUTE_KYC_OPS",
+      "FILE_STR_DRAFT",
+      "SEND_RM_BRIEF",
+      "SEND_CUSTOMER_DOCREQ"
+    ]
+  },
+  "notes_for_llm4": [
+    "Highlight why SOF is proportionate and soft hold is deferred."
+  ]
+}

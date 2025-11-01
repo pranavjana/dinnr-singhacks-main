@@ -1,0 +1,23 @@
+{
+  "schema_version": "v1",
+  "decision": "PASS",
+  "rule_codes": ["KYC_COMPLETE"],
+  "corridor": {
+    "origin_country": "SGP",
+    "destination_country": "SGP",
+    "channel": "SWIFT",
+    "currency": "SGD"
+  },
+  "amount": 2500,
+  "behavioural_patterns": [],
+  "evidence": [
+    {
+      "type": "document",
+      "id_hash": "ABCDEF1234567890",
+      "summary": "Onboarding KYC verified"
+    }
+  ],
+  "metadata": {
+    "customer_id_hash": "hash:pass1234"
+  }
+}

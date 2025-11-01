@@ -1,0 +1,31 @@
+{
+  "schema_version": "v1",
+  "decision": "SUS",
+  "rule_codes": ["SOF_MISSING", "AML_COMPLEX"],
+  "action_ids": [
+    "CREATE_CASE",
+    "REQUEST_SOF_DOCS",
+    "SEND_RM_BRIEF",
+    "ESCALATE_L2_AML",
+    "SEND_CUSTOMER_DOCREQ"
+  ],
+  "analysis_report": "Alert classified as suspicious due to missing SOF documentation and complex flow via Myanmar. Recommend opening an internal case, gathering SOF evidence, briefing the RM, escalating to L2, and sending a placeholder-safe customer request.",
+  "corridor": {
+    "origin_country": "SGP",
+    "destination_country": "MMR",
+    "channel": "SWIFT",
+    "currency": "USD"
+  },
+  "amount": 15000,
+  "behavioural_patterns": ["MULTI_JURISDICTION_CHAIN"],
+  "evidence": [
+    {
+      "type": "transaction",
+      "id_hash": "DEADBEEF1234AFFF",
+      "summary": "Large outgoing transfer to high-risk jurisdiction"
+    }
+  ],
+  "metadata": {
+    "customer_id_hash": "hash:sus5678"
+  }
+}

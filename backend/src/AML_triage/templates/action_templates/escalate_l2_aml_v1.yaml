@@ -1,0 +1,22 @@
+template_id: escalate_l2_aml_v1
+version: 1.0.0
+locale: en
+channel: INTERNAL
+purpose: Escalate complex cases to Level 2 AML analysts
+when_to_use: Use when complex behavioural patterns or multiple high-risk rules trigger simultaneously
+required_fields:
+  - decision
+  - rule_codes
+  - evidence
+playbook_steps:
+  - Summarise key red flags
+  - Attach supporting evidence hashes
+  - Assign to L2 queue with SLA 24h
+compliance_notes: Escalation ensures second-level review is auditable
+rules:
+  - AML_COMPLEX
+risk_levels:
+  - HIGH
+corridors: []
+fewshot_examples:
+  - "Escalate to L2 AML due to layered transactions and corridor mismatches."

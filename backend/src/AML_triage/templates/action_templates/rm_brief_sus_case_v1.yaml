@@ -1,0 +1,23 @@
+template_id: rm_brief_sus_case_v1
+version: 1.0.0
+locale: en
+channel: INTERNAL
+purpose: Provide Relationship Manager with concise summary of SUS case
+when_to_use: Use for SUS decisions requiring RM awareness but no customer disclosure yet
+required_fields:
+  - customer_reference
+  - risk_summary
+  - next_steps
+playbook_steps:
+  - Outline reason codes and expected RM actions
+  - Reinforce confidentiality expectations
+  - Provide escalation contact
+compliance_notes: Tone must remain professional and internal-only
+rules:
+  - AML_COMPLEX
+  - SOF_MISSING
+risk_levels:
+  - MEDIUM
+corridors: []
+fewshot_examples:
+  - "RM brief: highlight SOF gaps and pending compliance review with no client outreach."

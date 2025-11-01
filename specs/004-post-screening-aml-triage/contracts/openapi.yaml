@@ -1,0 +1,425 @@
+openapi: 3.1.0
+info:
+  title: Post-Screening AML Triage API
+  version: 0.1.0
+  description: >
+    FastAPI service that converts screening results into policy-compliant action plans,
+    captures reviewer feedback, and exposes health/observability metadata.
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+paths:
+  /triage/plan:
+    post:
+      summary: Generate AML triage plan
+      description: >
+        Accepts a ScreeningResult payload, validates it against the contract registry,
+        orchestrates the LangGraph agent (with Groq LLM under JSON schema rails),
+        and returns a compliant Plan response.
+      operationId: createPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScreeningResult'
+      responses:
+        '200':
+          description: Plan generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Plan'
+        '400':
+          description: Input validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Policy guardrail or JSON schema failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Unexpected system failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /feedback:
+    post:
+      summary: Submit reviewer feedback
+      description: >
+        Records reviewer assessment labels and optional action fit score. Stored in SQLite
+        and exposed for future few-shot retrieval by matching corridor/rule fingerprints.
+      operationId: createFeedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackRequest'
+      responses:
+        '202':
+          description: Feedback accepted (idempotent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FeedbackRecord'
+        '400':
+          description: Validation error (missing or invalid fields)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate feedback detected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /healthz:
+    get:
+      summary: Service health probe
+      description: Returns liveness, schema version, offline toggle, and readiness of core dependencies.
+      operationId: getHealthz
+      responses:
+        '200':
+          description: Health state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+components:
+  schemas:
+    ScreeningResult:
+      type: object
+      required:
+        - schema_version
+        - decision
+        - rule_codes
+        - corridor
+        - amount
+      properties:
+        schema_version:
+          type: string
+          example: v1
+        decision:
+          type: string
+          enum: [PASS, SUS, FAIL]
+        rule_codes:
+          type: array
+          items:
+            type: string
+        corridor:
+          type: object
+          required: [origin_country, destination_country, channel, currency]
+          properties:
+            origin_country:
+              type: string
+              description: ISO-3166 alpha-3
+              example: NGA
+            destination_country:
+              type: string
+              description: ISO-3166 alpha-3
+              example: SGP
+            channel:
+              type: string
+              example: SWIFT
+            currency:
+              type: string
+              description: ISO-4217
+              example: USD
+        amount:
+          type: number
+          format: double
+          minimum: 0
+        behavioural_patterns:
+          type: array
+          items:
+            type: string
+        evidence:
+          type: array
+          items:
+            type: object
+            required: [type, id_hash]
+            properties:
+              type:
+                type: string
+                example: document
+              id_hash:
+                type: string
+                description: SHA-256 hash of redacted identifier
+              uri:
+                type: string
+                format: uri
+              summary:
+                type: string
+        metadata:
+          type: object
+          additionalProperties: true
+      additionalProperties: false
+
+    Plan:
+      type: object
+      required:
+        - plan_id
+        - input_hash
+        - schema_version
+        - summary
+        - recommended_actions
+        - communications
+        - rationales
+        - confidence
+        - approvals_required
+        - audit
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        input_hash:
+          type: string
+        schema_version:
+          type: string
+          example: v1
+        summary:
+          $ref: '#/components/schemas/PlanSummary'
+        recommended_actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanAction'
+        communications:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommInstruction'
+        rationales:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        approvals_required:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalRequest'
+        audit:
+          type: object
+          required:
+            - created_at
+            - schema_version
+            - aliases_used
+            - templates_used
+            - plan_hash
+            - agent_iterations
+          properties:
+            created_at:
+              type: string
+              format: date-time
+            schema_version:
+              type: string
+            aliases_used:
+              type: array
+              items:
+                type: string
+            templates_used:
+              type: array
+              items:
+                type: string
+            plan_hash:
+              type: string
+            agent_iterations:
+              type: integer
+              minimum: 1
+            offline_mode:
+              type: boolean
+
+    PlanSummary:
+      type: object
+      required:
+        - action_counts
+        - approvals_pending
+        - corridor_risk
+        - confidence_avg
+      properties:
+        action_counts:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+        approvals_pending:
+          type: integer
+          minimum: 0
+        corridor_risk:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+        confidence_avg:
+          type: number
+          minimum: 0
+          maximum: 1
+
+    PlanAction:
+      type: object
+      required:
+        - action_id
+        - status
+        - priority
+        - rationale
+        - confidence
+        - requires_approval
+        - template_ids
+      properties:
+        action_id:
+          type: string
+        status:
+          type: string
+          enum: [SUGGESTED, APPROVED, REJECTED, EXECUTED]
+        priority:
+          type: integer
+          minimum: 1
+        rationale:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        requires_approval:
+          type: boolean
+        template_ids:
+          type: array
+          items:
+            type: string
+
+    CommInstruction:
+      type: object
+      required:
+        - template_id
+        - audience
+        - tone
+        - placeholders
+        - delivery_channel
+      properties:
+        template_id:
+          type: string
+        audience:
+          type: string
+          enum: [RM, CUSTOMER]
+        tone:
+          type: string
+          enum: [PROFESSIONAL_INTERNAL, NEUTRAL_EXTERNAL]
+        placeholders:
+          type: object
+          additionalProperties:
+            type: string
+        delivery_channel:
+          type: string
+          enum: [EMAIL, PORTAL_TASK]
+
+    ApprovalRequest:
+      type: object
+      required:
+        - action_id
+        - approver_role
+        - status
+      properties:
+        action_id:
+          type: string
+        approver_role:
+          type: string
+          enum: [MLRO, COMPLIANCE_REVIEWER]
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        decided_at:
+          type: string
+          format: date-time
+        reviewer_id_hash:
+          type: string
+
+    FeedbackRequest:
+      type: object
+      required:
+        - plan_id
+        - label
+        - reviewer_id_hash
+      properties:
+        plan_id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          enum: [good_pass, bad_pass, good_sus, bad_sus, good_fail, bad_fail]
+        action_fit:
+          type: number
+          minimum: 0
+          maximum: 1
+        reviewer_id_hash:
+          type: string
+        notes:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+
+    FeedbackRecord:
+      allOf:
+        - $ref: '#/components/schemas/FeedbackRequest'
+        - type: object
+          required:
+            - stored_at
+          properties:
+            stored_at:
+              type: string
+              format: date-time
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - schema_version
+        - strict_fields
+        - offline_mode
+        - templates_loaded
+        - actions_whitelist_size
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        schema_version:
+          type: string
+        strict_fields:
+          type: boolean
+        offline_mode:
+          type: boolean
+        templates_loaded:
+          type: integer
+          minimum: 0
+        actions_whitelist_size:
+          type: integer
+          minimum: 0
+        dependencies:
+          type: object
+          additionalProperties:
+            type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - trace_id
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        trace_id:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
