@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID d07f9a97-4cf6-48d8-aa80-843378954e73 has been flagged for further review due to a screening decision of SUS, indicating potential suspicious activity. Given the lack of provided signals, profile considerations, and transaction snapshot, a thorough investigation is necessary to determine the legitimacy of the transactions. The recommended action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary objective is to gather more information and conduct a thorough investigation. However, if the customer fails to respond or provides incomplete evidence, the case may be flagged for escalation, and additional actions may be considered.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS indicates potential suspicious activity, justifying the need for further investigation.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request. A follow-up review is recommended within 10 business days to assess the progress of the investigation. Outstanding evidence required includes the customer's response to the SOF request, additional transaction snapshots, and analyst observations. The reviewer should verify that the case references the current trace ID and screening decision and confirm the L2 queue capacity or identify a named analyst if required by SOP.

@@ -22,8 +22,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { useState, useEffect } from "react"
+import { ChevronDown, Trash2, Check } from "lucide-react"
+import { api } from "@/lib/api"
+import { toast } from "sonner"
 
 interface Verdict {
   payment_id?: string
@@ -62,6 +64,9 @@ interface Transaction {
   triage?: TriageResult
   isAnalyzing?: boolean
   isTriaging?: boolean
+  user_action?: string
+  user_action_timestamp?: string
+  user_action_by?: string
   [key: string]: any
 }
 
@@ -70,6 +75,123 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [showAllFields, setShowAllFields] = useState<Set<number>>(new Set())
+
+  // Load existing transactions on mount
+  useEffect(() => {
+    loadExistingTransactions()
+  }, [])
+
+  const loadExistingTransactions = async () => {
+    try {
+      const response = await api.getTransactions(50)
+
+      // Handle both old and new API response formats
+      const transactionsArray = Array.isArray(response) ? response : (response as any).transactions || []
+
+      // Convert database transactions to Transaction format
+      const dbTransactions: Transaction[] = transactionsArray.map((txn: any) => ({
+        ...txn.transaction_data,
+        id: txn.id,
+        verdict: txn.verdict,
+        triage: txn.triage,
+        isAnalyzing: txn.is_analyzing,
+        isTriaging: txn.is_triaging,
+        user_action: txn.user_action,
+        user_action_timestamp: txn.user_action_timestamp,
+        user_action_by: txn.user_action_by,
+      }))
+
+      setTransactions(dbTransactions)
+    } catch (error) {
+      console.error('Failed to load transactions:', error)
+      // Don't show error to user, just start with empty list
+    }
+  }
+
+  const saveTransactionToDb = async (transaction: Transaction) => {
+    try {
+      await api.saveTransaction({
+        payment_id: transaction.payment_id,
+        trace_id: transaction.trace_id,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        originator_name: transaction.originator_name,
+        beneficiary_name: transaction.beneficiary_name,
+        merchant: transaction.merchant,
+        category: transaction.category,
+        product_type: transaction.product_type,
+        booking_datetime: transaction.booking_datetime,
+        transaction_data: transaction,
+        verdict: transaction.verdict,
+        triage: transaction.triage,
+        is_analyzing: transaction.isAnalyzing || false,
+        is_triaging: transaction.isTriaging || false,
+      })
+    } catch (error) {
+      console.error('Failed to save transaction:', error)
+    }
+  }
+
+  const updateTransactionInDb = async (transactionId: string, updates: any) => {
+    try {
+      await api.updateTransaction(transactionId, updates)
+    } catch (error) {
+      console.error('Failed to update transaction:', error)
+    }
+  }
+
+  const handleDeleteTransaction = async (transactionId: string, index: number) => {
+    try {
+      // Delete from database
+      await api.deleteTransaction(transactionId)
+
+      // Remove from local state
+      setTransactions(prev => prev.filter((_, idx) => idx !== index))
+
+      toast.success("Transaction deleted", {
+        description: "Transaction has been removed successfully",
+      })
+    } catch (error) {
+      console.error('Failed to delete transaction:', error)
+      toast.error("Error deleting transaction", {
+        description: error instanceof Error ? error.message : "Failed to delete transaction",
+      })
+    }
+  }
+
+  const handleActionClick = async (transactionId: string, index: number, action: string) => {
+    try {
+      // Update database with user action
+      await updateTransactionInDb(transactionId, {
+        user_action: action,
+        user_action_timestamp: new Date().toISOString(),
+        user_action_by: 'current_user', // Replace with actual user ID when auth is implemented
+      })
+
+      // Update local state
+      setTransactions(prev =>
+        prev.map((txn, idx) =>
+          idx === index
+            ? {
+                ...txn,
+                user_action: action,
+                user_action_timestamp: new Date().toISOString(),
+                user_action_by: 'current_user',
+              }
+            : txn
+        )
+      )
+
+      toast.success("Action recorded", {
+        description: `Action "${action.replace('action_', '').replace(/_/g, ' ')}" has been saved`,
+      })
+    } catch (error) {
+      console.error('Failed to save action:', error)
+      toast.error("Error saving action", {
+        description: error instanceof Error ? error.message : "Failed to save action",
+      })
+    }
+  }
 
   const loadTransaction = async () => {
     setIsLoading(true)
@@ -81,7 +203,7 @@ export default function Page() {
       }
       const fetchedTransactions = await response.json()
 
-      // Add transactions with analyzing state
+      // Add transactions with analyzing state and save to DB
       const transactionsWithState = fetchedTransactions.map((txn: any) => ({
         ...txn,
         isAnalyzing: true,
@@ -90,8 +212,34 @@ export default function Page() {
       // Add to the list immediately
       setTransactions(prev => [...transactionsWithState, ...prev])
 
+      // Save each new transaction to database
+      const savedTransactions = await Promise.all(
+        transactionsWithState.map(async (txn: any) => {
+          const response = await api.saveTransaction({
+            payment_id: txn.payment_id,
+            trace_id: txn.trace_id,
+            amount: parseFloat(txn.amount || 0),
+            currency: txn.currency || 'SGD',
+            originator_name: txn.originator_name,
+            beneficiary_name: txn.beneficiary_name,
+            merchant: txn.merchant,
+            category: txn.category,
+            product_type: txn.product_type,
+            booking_datetime: txn.booking_datetime,
+            transaction_data: txn,
+            is_analyzing: true,
+          }) as any
+          return { ...txn, id: response.transaction.id }
+        })
+      )
+
+      // Update transactions with database IDs
+      setTransactions(prev => prev.map((txn, idx) =>
+        idx < savedTransactions.length ? savedTransactions[idx] : txn
+      ))
+
       // Analyze each transaction
-      for (let i = 0; i < fetchedTransactions.length; i++) {
+      for (let i = 0; i < savedTransactions.length; i++) {
         try {
           const analyzeResponse = await fetch('/api/v1/payments/analyze', {
             method: 'POST',
@@ -112,6 +260,15 @@ export default function Page() {
                   : txn
               )
             )
+
+            // Update transaction in database
+            if (savedTransactions[i].id) {
+              await updateTransactionInDb(savedTransactions[i].id, {
+                verdict,
+                is_analyzing: false,
+                is_triaging: true,
+              })
+            }
 
             // Call triage endpoint
             try {
@@ -137,6 +294,14 @@ export default function Page() {
                       : txn
                   )
                 )
+
+                // Update transaction in database
+                if (savedTransactions[i].id) {
+                  await updateTransactionInDb(savedTransactions[i].id, {
+                    triage: triageResult,
+                    is_triaging: false,
+                  })
+                }
               } else {
                 // Mark triage as failed
                 setTransactions(prev =>
@@ -146,6 +311,13 @@ export default function Page() {
                       : txn
                   )
                 )
+
+                // Update transaction in database
+                if (savedTransactions[i].id) {
+                  await updateTransactionInDb(savedTransactions[i].id, {
+                    is_triaging: false,
+                  })
+                }
               }
             } catch (error) {
               console.error(`Error triaging transaction ${i}:`, error)
@@ -156,6 +328,13 @@ export default function Page() {
                     : txn
                 )
               )
+
+              // Update transaction in database
+              if (savedTransactions[i].id) {
+                await updateTransactionInDb(savedTransactions[i].id, {
+                  is_triaging: false,
+                })
+              }
             }
           } else {
             // Mark as failed analysis
@@ -166,6 +345,13 @@ export default function Page() {
                   : txn
               )
             )
+
+            // Update transaction in database
+            if (savedTransactions[i].id) {
+              await updateTransactionInDb(savedTransactions[i].id, {
+                is_analyzing: false,
+              })
+            }
           }
         } catch (error) {
           console.error(`Error analyzing transaction ${i}:`, error)
@@ -177,6 +363,13 @@ export default function Page() {
                 : txn
             )
           )
+
+          // Update transaction in database
+          if (savedTransactions[i].id) {
+            await updateTransactionInDb(savedTransactions[i].id, {
+              is_analyzing: false,
+            })
+          }
         }
       }
     } catch (error) {
@@ -239,7 +432,7 @@ export default function Page() {
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col h-screen overflow-hidden">
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
@@ -262,8 +455,8 @@ export default function Page() {
             </Breadcrumb>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-1 flex-col p-4 pt-0 overflow-hidden">
+          <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <h2 className="text-2xl font-bold tracking-tight">Transaction Monitor</h2>
             <Button onClick={loadTransaction} disabled={isLoading}>
               {isLoading ? "Loading..." : "Load Transaction"}
@@ -271,74 +464,88 @@ export default function Page() {
           </div>
 
           {/* Recent Transactions - Full Width */}
-          <div className="flex flex-col gap-4">
-            <Card className="flex flex-col">
-              <CardHeader>
+          <div className="flex flex-col flex-1 min-h-0">
+            <Card className="flex flex-col h-full min-h-0 border-0 shadow-none">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle>Recent Transactions</CardTitle>
                 <CardDescription>Incoming transactions with risk analysis</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 overflow-auto">
+              <CardContent className="flex-1 overflow-y-auto min-h-0">
                 {transactions.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
                     No transactions yet. Click "Load Transaction" to fetch sample transactions.
                   </p>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2">
+                    {/* Column Headers */}
+                    <div className="sticky top-0 bg-background z-10 flex items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b">
+                      <div className="flex-1 min-w-0">Merchant / Originator</div>
+                      <div className="w-[200px] text-center">Status</div>
+                      <div className="w-[120px] text-right">Amount</div>
+                      <div className="w-4"></div>
+                    </div>
+
                     {transactions.map((transaction, index) => {
                       const isExpanded = expandedCards.has(index)
                       const showAll = showAllFields.has(index)
 
                       return (
-                        <Card
-                          key={index}
-                          className={`cursor-pointer hover:shadow-md transition-shadow border-2 ${getRiskColor(transaction.verdict?.verdict)}`}
-                          onClick={() => toggleCard(index)}
-                        >
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                  Incoming Transaction
-                                </CardTitle>
-                                {transaction.isAnalyzing && (
-                                  <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full animate-pulse">
-                                    Analyzing...
-                                  </span>
-                                )}
-                                {transaction.isTriaging && (
-                                  <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded-full animate-pulse">
-                                    Triaging...
-                                  </span>
-                                )}
-                                {transaction.verdict && transaction.verdict.verdict && (
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${getRiskBadgeColor(transaction.verdict.verdict)}`}>
-                                    {transaction.verdict.verdict.toUpperCase()}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-xl font-semibold">
+                        <div key={index} className="group">
+                          {/* Compact Transaction Row */}
+                          <div
+                            className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 dark:bg-secondary/20 cursor-pointer transition-all hover:bg-secondary/60 dark:hover:bg-secondary/30"
+                            onClick={() => toggleCard(index)}
+                          >
+                            {/* Left: Name and Type */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm truncate">
                                   {transaction.originator_name || transaction.merchant || 'Unknown Merchant'}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {transaction.product_type || transaction.category || 'N/A'}
                                 </span>
                               </div>
                             </div>
-                            <div className="flex flex-col items-end gap-1">
-                              <span className="text-xl font-bold">
-                                {transaction.currency || '$'}{typeof transaction.amount === 'number' ? transaction.amount.toFixed(2) : parseFloat(transaction.amount || '0').toFixed(2)}
-                              </span>
-                              {transaction.verdict && (
-                                <span className="text-xs text-muted-foreground">
-                                  Score: {transaction.verdict.risk_score?.toFixed(1) || 'N/A'}
+
+                            {/* Center: Status Badges */}
+                            <div className="w-[200px] flex items-center justify-center gap-1.5">
+                              {transaction.isAnalyzing && (
+                                <span className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md animate-pulse">
+                                  Analyzing
+                                </span>
+                              )}
+                              {transaction.isTriaging && (
+                                <span className="text-xs bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md animate-pulse">
+                                  Triaging
+                                </span>
+                              )}
+                              {transaction.verdict?.verdict && !transaction.isAnalyzing && (
+                                <span className={`text-xs px-2 py-0.5 rounded-md ${
+                                  transaction.verdict.verdict === 'fail' ? 'bg-red-500/20 text-red-700 dark:text-red-300' :
+                                  transaction.verdict.verdict === 'suspicious' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-300' :
+                                  transaction.verdict.verdict === 'pass' ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
+                                  'bg-gray-500/20 text-gray-700 dark:text-gray-300'
+                                }`}>
+                                  {transaction.verdict.verdict.toUpperCase()}
                                 </span>
                               )}
                             </div>
-                          </div>
-                        </CardHeader>
 
-                        {isExpanded && (
-                          <CardContent onClick={(e) => e.stopPropagation()}>
-                            <div className="space-y-4">
+                            {/* Right: Amount */}
+                            <div className="w-[120px] text-right">
+                              <div className="font-bold text-sm">
+                                {transaction.currency || 'SGD'} {typeof transaction.amount === 'number' ? transaction.amount.toFixed(2) : parseFloat(transaction.amount || '0').toFixed(2)}
+                              </div>
+                            </div>
+
+                            {/* Expand Indicator */}
+                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+
+                          {/* Expanded Details */}
+                          {isExpanded && (
+                            <div className="mt-2 ml-4 p-4 border-l-2 border-gray-200 dark:border-gray-800 space-y-4" onClick={(e) => e.stopPropagation()}>
                               {/* Risk Analysis Section */}
                               {transaction.verdict && (
                                 <div className="p-3 rounded-lg bg-muted/50 space-y-2">
@@ -388,32 +595,40 @@ export default function Page() {
 
                               {/* AML Triage Section */}
                               {transaction.triage && (
-                                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 space-y-3 border-2 border-blue-200 dark:border-blue-800">
+                                <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/30 space-y-3 border border-blue-200 dark:border-blue-800">
                                   <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">AML Triage Plan</h4>
-                                    <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full font-semibold">
+                                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Recommended Actions</h4>
+                                    <span className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md">
                                       {transaction.triage.screening_result.decision}
                                     </span>
                                   </div>
-                                  <div className="space-y-2">
-                                    {transaction.triage.screening_result.action_ids && transaction.triage.screening_result.action_ids.length > 0 && (
-                                      <div>
-                                        <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Recommended Actions:</span>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                          {transaction.triage.screening_result.action_ids.map((action: string, i: number) => (
-                                            <span key={i} className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded">
-                                              {action.replace('action_', '').replace(/_/g, ' ')}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {transaction.triage.screening_result.action_ids && transaction.triage.screening_result.action_ids.length > 0 ? (
+                                      transaction.triage.screening_result.action_ids.map((action: string, i: number) => {
+                                        const isSelected = transaction.user_action === action
+                                        return (
+                                          <Button
+                                            key={i}
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => transaction.id && handleActionClick(transaction.id, index, action)}
+                                            disabled={!transaction.id}
+                                            className={`text-xs transition-all duration-300 gap-1.5 ${
+                                              isSelected
+                                                ? 'bg-green-100/80 dark:bg-green-900/40 border-green-400 dark:border-green-600 text-green-800 dark:text-green-200 hover:bg-green-100/80 dark:hover:bg-green-900/40'
+                                                : 'bg-white dark:bg-gray-900 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950'
+                                            }`}
+                                          >
+                                            {isSelected && (
+                                              <Check className="h-3 w-3 animate-in zoom-in-50 duration-300" />
+                                            )}
+                                            {action.replace('action_', '').replace(/_/g, ' ')}
+                                          </Button>
+                                        )
+                                      })
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">No actions required</span>
                                     )}
-                                    <div>
-                                      <span className="text-xs text-blue-700 dark:text-blue-300 font-semibold">Triage Plan:</span>
-                                      <p className="text-sm mt-1 text-blue-900 dark:text-blue-100 whitespace-pre-wrap font-medium">
-                                        {transaction.triage.triage_plan}
-                                      </p>
-                                    </div>
                                   </div>
                                 </div>
                               )}
@@ -456,12 +671,26 @@ export default function Page() {
                                   </div>
                                 </CollapsibleContent>
                               </Collapsible>
+
+                              {/* Delete Button */}
+                              {transaction.id && (
+                                <div className="pt-4 border-t flex justify-end">
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeleteTransaction(transaction.id!, index)}
+                                    className="gap-2"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete Transaction
+                                  </Button>
+                                </div>
+                              )}
                             </div>
-                          </CardContent>
-                        )}
-                      </Card>
-                    )
-                  })}
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </CardContent>

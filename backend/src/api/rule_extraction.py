@@ -331,6 +331,80 @@ async def validate_rule(rule_id: str, validated_by: str):
         raise HTTPException(status_code=500, detail=f"Validation failed: {str(e)}")
 
 
+class AuditEntryRequest(BaseModel):
+    """Request to create an audit trail entry."""
+    action: str
+    user_name: str
+    rules_created: int = 0
+    rules_updated: int = 0
+    status: Literal["success", "failed"] = "success"
+    details: str = ""
+
+
+@router.post("/audit-trail")
+async def create_audit_entry(request: AuditEntryRequest):
+    """
+    Create a new audit trail entry.
+    """
+    db = get_supabase_service()
+
+    try:
+        import asyncio
+        from datetime import datetime
+
+        entry_data = {
+            "action": request.action,
+            "user_name": request.user_name,
+            "rules_created": request.rules_created,
+            "rules_updated": request.rules_updated,
+            "status": request.status,
+            "details": request.details,
+            "timestamp": datetime.utcnow().isoformat(),
+            "date_updated": datetime.utcnow().isoformat(),
+        }
+
+        result = await asyncio.to_thread(
+            lambda: db.client.table("audit_trail")
+            .insert(entry_data)
+            .execute()
+        )
+
+        logger.info("Audit entry created", action=request.action, status=request.status)
+
+        return {"status": "success", "entry": result.data[0]}
+
+    except Exception as e:
+        logger.error("Failed to create audit entry", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to create audit entry: {str(e)}")
+
+
+@router.get("/audit-trail")
+async def get_audit_trail(limit: int = 100):
+    """
+    Get recent audit trail entries.
+    """
+    db = get_supabase_service()
+
+    try:
+        import asyncio
+
+        result = await asyncio.to_thread(
+            lambda: db.client.table("audit_trail")
+            .select("*")
+            .order("timestamp", desc=True)
+            .limit(limit)
+            .execute()
+        )
+
+        logger.info("Audit trail retrieved", count=len(result.data))
+
+        return {"entries": result.data}
+
+    except Exception as e:
+        logger.error("Failed to retrieve audit trail", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve audit trail: {str(e)}")
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint for extraction service."""

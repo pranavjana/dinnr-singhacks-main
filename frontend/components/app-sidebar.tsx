@@ -7,6 +7,8 @@ import {
   GalleryVerticalEnd,
   LayoutDashboard,
   Shield,
+  ArrowLeftRight,
+  ListChecks,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -48,9 +50,19 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "#",
       icon: LayoutDashboard,
       isActive: true,
+      items: [
+        {
+          title: "Transactions",
+          url: "/dashboard",
+        },
+        {
+          title: "Actions",
+          url: "/actions",
+        },
+      ],
     },
     {
       title: "Rules",

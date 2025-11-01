@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID cdcb41d0-8e23-4562-b876-e82f82342f8d has been flagged for further review due to an unspecified risk level and a screening decision of SUS. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case, escalate to a Level 2 AML analyst for deeper analysis, and request source-of-funds documentation to gather more information. The recommended actions will help determine the legitimacy of the transactions and ensure compliance with AML regulations.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Deprioritisation**
+No alternative actions have been identified, as the primary goal is to gather more information about the transactions and the customer. The recommended actions are prioritised due to the unspecified risk level and the need for further analysis.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context have been provided, the screening decision of SUS and the unspecified risk level justify the recommended actions. The lack of information highlights the need for a thorough investigation to determine the legitimacy of the transactions.
+
+**Next Steps**
+The reviewer should monitor the case for updates, follow up on the request for source-of-funds documentation within 5 business days, and review the case for escalation if the customer fails to respond or provides incomplete evidence. Outstanding evidence required includes the source-of-funds documentation and any additional information that may be requested by the Level 2 AML analyst during their review. The reviewer should also verify that the case references the current trace ID and screening decision, and confirm the customer has not already submitted acceptable source-of-funds documentation in the past 90 days.

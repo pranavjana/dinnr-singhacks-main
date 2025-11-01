@@ -1,0 +1,16 @@
+**Executive Summary**
+The case efd34f82-87a7-4435-96c2-b526302398ba has been flagged with a decision of SUS, warranting further investigation due to unspecified risk levels and the absence of provided signals, profile considerations, transaction snapshots, and notes from upstream. The recommended action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer. These steps are crucial in gathering more information to assess the risk associated with the flagged transactions and to ensure compliance with AML regulations.
+
+**Recommended Actions:**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, ensuring the case references the current trace ID and screening decision.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for a more detailed analysis, submitting an escalation request with a summary of detected patterns and open questions.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer to collect evidence explaining the origin of funds for the flagged transactions, confirming the customer has not already submitted acceptable documentation in the past 90 days.
+
+**Alternative Actions and Considerations**
+No alternative actions were identified as the primary steps of creating a case, escalating for further analysis, and requesting source-of-funds documentation are fundamental in addressing the unspecified risk level associated with the case. These actions were not deprioritized as they directly contribute to understanding the transaction context and risk signals that justify the recommendation for further investigation.
+
+**Risk Signals and Transaction Context**
+Although specific risk signals and transaction context are not provided, the unspecified risk level and the decision of SUS indicate a need for a thorough investigation. The recommended actions aim to gather more information to assess the risk and ensure compliance with AML regulations.
+
+**Next Steps for the Reviewer**
+The reviewer should monitor the case for the customer's response to the source-of-funds documentation request, follow up within 5 business days if necessary, and escalate the case if the customer fails to respond or provides incomplete evidence. Outstanding evidence includes the source-of-funds documentation and any additional information that may be required based on the customer's response. The reviewer should also verify that the case is properly updated in the CaseWorks record and that all relevant evidence is attached. Follow-up timing will depend on the customer's response and the complexity of the case, requiring regular checks to ensure the case is progressing appropriately.
