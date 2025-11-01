@@ -8,8 +8,11 @@ from fastapi.responses import JSONResponse
 import sys
 import os
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory and src directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+src_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, backend_dir)
+sys.path.insert(0, src_dir)
 
 from config import settings
 
