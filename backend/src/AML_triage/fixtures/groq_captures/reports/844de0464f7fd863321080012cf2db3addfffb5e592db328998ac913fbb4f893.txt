@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 4aefc155-95a9-4eba-888b-84bfaaf26f07 has been flagged for further investigation due to an unspecified risk level and a screening decision of SUS. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case, escalate to a Level 2 AML analyst for deeper analysis, and request source-of-funds documentation to gather more information. The recommended actions will help determine the legitimacy of the transactions and ensure compliance with AML regulations.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, providing a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Deprioritisation**
+No alternative actions were considered, as the provided information does not suggest any other viable paths. The recommended actions are essential to gather more information and determine the legitimacy of the transactions.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS and unspecified risk level justify the need for further investigation. The recommended actions will help identify potential risks and ensure compliance with AML regulations.
+
+**Next Steps**
+The reviewer should monitor the case for updates, follow up on the requested source-of-funds documentation within 5 business days, and review the case for any new information or evidence. Outstanding evidence includes the transaction snapshot, profile considerations, and any additional information that may be provided by the customer or during the investigation. The reviewer should also verify that the case references the current trace ID and screening decision, and confirm the customer has not already submitted acceptable source-of-funds documentation in the past 90 days.
