@@ -1,0 +1,509 @@
+openapi: 3.0.0
+info:
+  title: PDF Document Management API
+  version: 1.0.0
+  description: Manage compliance PDF documents, ingestion, and audit trails
+  contact:
+    name: DINNR AML Platform
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+paths:
+  /documents/ingest:
+    post:
+      summary: Ingest a new PDF document
+      operationId: ingestDocument
+      description: |
+        Upload and ingest a new PDF document. Triggers text extraction, deduplication check,
+        and immediate embedding via Gemini API (with exponential backoff retry on failure).
+        Document becomes searchable once embedding is complete.
+      tags:
+        - Document Management
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IngestRequest'
+      responses:
+        '202':
+          description: |
+            Document accepted for ingestion. Embedding will proceed asynchronously.
+            Check status via GET /documents/{id}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestedDocumentResponse'
+              example:
+                document_id: "550e8400-e29b-41d4-a716-446655440001"
+                status: pending_embedding
+                ingestion_date: "2025-11-01T12:34:56Z"
+                message: "Document queued for embedding. Will be searchable shortly."
+        '400':
+          description: Bad request (invalid file, missing fields, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflict (duplicate document detected)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DuplicateResponse'
+        '413':
+          description: Payload too large (file exceeds max size)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: [ ]
+        - ApiKeyAuth: [ ]
+
+  /documents/{documentId}:
+    get:
+      summary: Retrieve document metadata and status
+      operationId: getDocument
+      description: |
+        Get full metadata, processing status, and audit trail for a document.
+        Returns document content availability and embedding status.
+      tags:
+        - Document Management
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the document
+      responses:
+        '200':
+          description: Document metadata and status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentDetail'
+              example:
+                document_id: "550e8400-e29b-41d4-a716-446655440001"
+                source_url: "https://mas.org.sg/circular-2024-01"
+                filename: "MAS_Circular_2024_01.pdf"
+                file_size_bytes: 2458624
+                page_count: 45
+                ingestion_date: "2025-06-15T10:30:00Z"
+                status: embedding_complete
+                extraction_confidence: 0.98
+                is_duplicate: false
+                embedding_count: 1
+                embedding_model: "models/embedding-001"
+                last_embedding_timestamp: "2025-06-15T10:35:00Z"
+                metadata:
+                  document_type: "circular"
+                  issuing_authority: "Monetary Authority of Singapore"
+                  circular_number: "MAS/NOTICE/2024-01"
+                  effective_date: "2024-02-01"
+                  regulatory_framework: [ "AML", "KYC" ]
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: [ ]
+        - ApiKeyAuth: [ ]
+
+  /documents/{documentId}/download:
+    get:
+      summary: Download original PDF file
+      operationId: downloadDocument
+      description: |
+        Retrieve the original PDF file for a stored document.
+        Returns the PDF with integrity verification (SHA-256 hash in header).
+      tags:
+        - Document Management
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the document
+      responses:
+        '200':
+          description: PDF file binary content
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+          headers:
+            X-Content-Hash:
+              schema:
+                type: string
+              description: SHA-256 hash of file contents for integrity verification
+              example: "abc123def456..."
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: [ ]
+        - ApiKeyAuth: [ ]
+
+  /documents/{documentId}/audit-trail:
+    get:
+      summary: Retrieve document audit trail
+      operationId: getAuditTrail
+      description: |
+        Get complete immutable audit trail for a document including all processing events,
+        retries, embedding operations, and quality metrics.
+      tags:
+        - Audit & Compliance
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUID of the document
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+          description: Maximum number of log entries to return
+      responses:
+        '200':
+          description: Audit trail entries (most recent first)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditTrailResponse'
+              example:
+                entries:
+                  - event_id: "evt-550e8400-e29b-41d4"
+                    event_type: "embedding_completed"
+                    timestamp: "2025-06-15T10:35:00Z"
+                    processor_version: "1.0.0"
+                    embedding_model: "models/embedding-001"
+                    tokens_used: 5234
+                    api_latency_ms: 450
+                    status: "success"
+                  - event_id: "evt-550e8400-e29b-41d5"
+                    event_type: "extraction_completed"
+                    timestamp: "2025-06-15T10:30:45Z"
+                    processor_version: "1.0.0"
+                    status: "success"
+                total_entries: 4
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: [ ]
+        - ApiKeyAuth: [ ]
+
+components:
+  schemas:
+    IngestRequest:
+      type: object
+      required:
+        - file
+        - source_url
+      properties:
+        file:
+          type: string
+          format: binary
+          description: PDF file (max 500MB)
+        source_url:
+          type: string
+          format: uri
+          description: Source URL from crawler (for audit trail)
+          example: "https://mas.org.sg/circular-2024-01"
+        source_name:
+          type: string
+          description: Regulatory authority name
+          example: "Monetary Authority of Singapore"
+          default: "Unknown"
+
+    IngestedDocumentResponse:
+      type: object
+      required:
+        - document_id
+        - status
+        - ingestion_date
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the document
+        status:
+          type: string
+          enum: [ ingested, pending_embedding, embedding_complete ]
+          description: Current processing status
+        ingestion_date:
+          type: string
+          format: date-time
+          description: Timestamp when document was ingested
+        message:
+          type: string
+          description: Human-readable status message
+        estimated_ready_time:
+          type: string
+          format: date-time
+          description: Estimated time when document will be searchable
+
+    DuplicateResponse:
+      type: object
+      description: Returned when duplicate document is detected
+      required:
+        - code
+        - message
+        - canonical_document_id
+      properties:
+        code:
+          type: string
+          enum: [ DUPLICATE_DETECTED ]
+        message:
+          type: string
+          description: "Duplicate document detected; already processing canonical version"
+        canonical_document_id:
+          type: string
+          format: uuid
+          description: UUID of the original document (use this instead)
+        canonical_ingestion_date:
+          type: string
+          format: date-time
+          description: When canonical document was ingested
+
+    DocumentDetail:
+      type: object
+      required:
+        - document_id
+        - source_url
+        - status
+      properties:
+        document_id:
+          type: string
+          format: uuid
+        source_url:
+          type: string
+          format: uri
+        filename:
+          type: string
+        file_size_bytes:
+          type: integer
+        page_count:
+          type: integer
+        ingestion_date:
+          type: string
+          format: date-time
+        last_updated:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [ ingested, pending_embedding, embedding_complete, embedding_failed ]
+        extraction_confidence:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Quality score of text extraction (0.0-1.0)
+        is_duplicate:
+          type: boolean
+        canonical_document_id:
+          type: string
+          format: uuid
+          description: If duplicate, points to original document
+        embedding_count:
+          type: integer
+          description: Number of embedding vectors created (1 if full doc, >1 if chunked)
+        embedding_model:
+          type: string
+          example: "models/embedding-001"
+        last_embedding_timestamp:
+          type: string
+          format: date-time
+        metadata:
+          $ref: '#/components/schemas/DocumentMetadata'
+
+    DocumentMetadata:
+      type: object
+      description: Structured metadata extracted from document
+      properties:
+        document_type:
+          type: string
+          enum: [ circular, notice, guideline, policy, other ]
+        issuing_authority:
+          type: string
+          example: "Monetary Authority of Singapore"
+        circular_number:
+          type: string
+          example: "MAS/NOTICE/2024-01"
+        effective_date:
+          type: string
+          format: date
+        expiry_date:
+          type: string
+          format: date
+        regulatory_framework:
+          type: array
+          items:
+            type: string
+          example: [ "AML", "KYC", "CTF" ]
+        primary_language:
+          type: string
+          enum: [ english, chinese, multilingual ]
+        has_chinese_content:
+          type: boolean
+
+    AuditTrailResponse:
+      type: object
+      description: Immutable audit trail for a document
+      required:
+        - entries
+        - total_entries
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogEntry'
+        total_entries:
+          type: integer
+          description: Total number of audit log entries for this document
+
+    AuditLogEntry:
+      type: object
+      required:
+        - event_id
+        - event_type
+        - timestamp
+        - status
+      properties:
+        event_id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+          enum:
+            - ingested
+            - extraction_started
+            - extraction_completed
+            - extraction_failed
+            - dedup_check
+            - embedding_queued
+            - embedding_started
+            - embedding_completed
+            - embedding_failed
+            - embedding_retried
+        timestamp:
+          type: string
+          format: date-time
+          description: UTC timestamp when event occurred
+        processor_version:
+          type: string
+          example: "1.0.0"
+        status:
+          type: string
+          enum: [ success, partial_success, failure ]
+        error_message:
+          type: string
+          description: Error details if status is failure
+        embedding_model:
+          type: string
+          description: For embedding events
+        embedding_model_version:
+          type: string
+        tokens_used:
+          type: integer
+          description: Tokens consumed by Gemini API
+        api_latency_ms:
+          type: integer
+          description: Time to process this event (milliseconds)
+        retry_attempt:
+          type: integer
+          minimum: 1
+          maximum: 3
+          description: Retry attempt number (1, 2, or 3)
+        retry_next_time:
+          type: string
+          format: date-time
+          description: Scheduled time for next retry attempt
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: DOCUMENT_NOT_FOUND
+        message:
+          type: string
+          example: "Document with ID 550e8400-e29b-41d4-a716-446655440001 not found"
+        details:
+          type: object
+          description: Additional context
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service authentication
+
+tags:
+  - name: Document Management
+    description: Upload, retrieve, and manage PDF documents
+  - name: Audit & Compliance
+    description: Audit trail and compliance verification operations

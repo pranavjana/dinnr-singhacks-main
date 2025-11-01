@@ -1,6 +1,16 @@
 # DINNR AML Platform — Project Constitution
 
-<!-- Sync Impact Report (v1.1.0 → v1.1.1): Specified Moonshot AI Kimi K2-0905 model via Groq API -->
+<!--
+Sync Impact Report (v1.1.1 → v1.2.0): Added backend folder structure principle
+- Version: 1.1.1 → 1.2.0 (MINOR: new Principle VIII added)
+- Modified: None
+- Added: Principle VIII. Backend Organization & Folder Structure
+- Removed: None
+- Files pending updates:
+  ✅ .specify/templates/tasks-template.md (already references /backend path)
+  ✅ .specify/templates/plan-template.md (no breaking changes, structure-agnostic)
+  ⚠ Future features should reference /backend folder in task definitions
+-->
 
 ## Core Principles
 
@@ -31,7 +41,22 @@ All sensitive transaction data, client documents, and regulatory intelligence mu
 ### VI. Scalable, Observable Backend
 FastAPI backend must expose structured metrics (Prometheus-compatible) and structured logs (JSON format) for every transaction analyzed, document processed, and alert generated. Request tracing must be end-to-end. Performance SLAs: transaction analysis <500ms, document processing <5s per file. Health checks and circuit breakers required for all external API calls (Groq, regulatory data sources).
 
-### VII. Frontend UX for Compliance Officers
+### VII. Backend Organization & Folder Structure
+
+All backend development work MUST be contained within the `/backend` folder at the repository root. This includes:
+- All Python source code for FastAPI application (`/backend/src/`)
+- Configuration files (`/backend/config/`)
+- Database migrations and schema files (`/backend/migrations/`)
+- Backend dependencies (`/backend/requirements.txt`, `backend/pyproject.toml`)
+- Backend-specific tests (`/backend/tests/`)
+- Agent workflows and LangGraph implementations (`/backend/agents/`)
+- API route definitions and middleware (`/backend/api/`)
+
+Frontend code must be in `/frontend` (or project root if single-folder structure), and must never import directly from backend modules. API communication must be solely through the REST API contract.
+
+**Rationale**: Clear separation of backend and frontend reduces coupling, enables independent deployment, facilitates clear code ownership, and aligns with industry standard monorepo practices. This structure enables the team to work in parallel without merge conflicts and supports future microservice extraction if needed.
+
+### VIII. Frontend UX for Compliance Officers
 Next.js frontend must provide intuitive, role-specific dashboards with real-time alert displays, drill-down document inspection, audit trail browsing, and one-click remediation actions. No dark patterns. Color-coding for risk levels must follow industry standards (red=high, yellow=medium, green=low). All workflows must be completable in ≤3 clicks from login.
 
 **Next.js Best Practices**:
@@ -43,6 +68,8 @@ Next.js frontend must provide intuitive, role-specific dashboards with real-time
 - Environment variables MUST be prefixed (`NEXT_PUBLIC_` for client-side only); secrets never exposed to frontend.
 - CSS MUST use TailwindCSS with shadcn/ui components; no custom CSS except for domain-specific styling via Tailwind utilities.
 - Type safety MANDATORY: All API responses typed with TypeScript interfaces; no untyped `any`.
+
+**Next.js and shadcn/ui Best Practices**:
 
 **shadcn/ui Integration Standards**:
 - Use shadcn/ui base components as foundation for all UI elements (Button, Card, Table, Dialog, Input, etc.).
@@ -65,6 +92,11 @@ Next.js frontend must provide intuitive, role-specific dashboards with real-time
 
 **Prohibited Technologies**: Unencrypted storage, plaintext credentials in code, closed-source compliance logic, vendor lock-in beyond Groq/Kimi, custom component libraries (use shadcn/ui), untyped code (TypeScript strict mode MANDATORY), model switching without constitution amendment.
 
+**Folder Structure Requirements**:
+- Backend development: `/backend/` directory exclusively (src, config, migrations, tests, agents, api)
+- Frontend development: `/frontend/` directory (or project root if single folder)
+- Backend and frontend must communicate via REST API only; no direct imports
+
 ## Development Workflow & Testing Discipline
 
 ### Code Review & Approval
@@ -73,8 +105,9 @@ All code changes (frontend, backend, agent logic) require:
 2. All tests passing (backend: ≥80% coverage, frontend: ≥60% coverage, integration tests for alert/workflow paths).
 3. Compliance checklist signed off by the team member most familiar with AML regulations.
 4. Architecture review for changes affecting agent design or data flow.
-5. **Frontend-specific checks**: TypeScript strict mode passes, shadcn/ui components used, Tailwind utilities only, Server Components by default.
-6. **Backend/Agent-specific checks**: LangGraph graph structure valid, agent state schema typed, all tools have error handling, max iterations configured.
+5. **Folder structure verification**: Backend changes must be in `/backend/` directory; frontend in `/frontend/` (or project root); no cross-imports.
+6. **Frontend-specific checks**: TypeScript strict mode passes, shadcn/ui components used, Tailwind utilities only, Server Components by default.
+7. **Backend/Agent-specific checks**: LangGraph graph structure valid, agent state schema typed, all tools have error handling, max iterations configured.
 
 ### Testing Gates (Non-Negotiable)
 - **Unit tests**: Every agent decision logic function must have test coverage; all shadcn/ui custom domain components tested in isolation.
@@ -146,13 +179,13 @@ This constitution supersedes all prior practices and guidelines. All technical d
 - **PATCH** (e.g., 1.0.1): Clarifications, wording refinements, non-semantic corrections.
 
 ### Compliance Review
-All PRs must include a checklist item: `- [ ] Verified compliance with Constitution (Core Principles I–VII)`. Code cannot be merged without this check signed off.
+All PRs must include a checklist item: `- [ ] Verified compliance with Constitution (Core Principles I–VIII)`. Code cannot be merged without this check signed off.
 
 **Domain-Specific Checklists by Area**:
-- **Frontend PRs**: `- [ ] TypeScript strict mode passes` | `- [ ] shadcn/ui components used (no custom CSS)` | `- [ ] Server Components by default` | `- [ ] Accessibility (WCAG 2.1 AA minimum)`
-- **Backend/Agent PRs**: `- [ ] LangGraph graph structure valid and logged` | `- [ ] Agent state schema typed (Pydantic)` | `- [ ] All tools have error handling` | `- [ ] Max iterations set with escape hatch` | `- [ ] Reasoning chain preserved for audit trail`
-- **Integration PRs**: `- [ ] E2E test coverage for user journey` | `- [ ] API contract stability verified` | `- [ ] No cross-layer responsibility violations`
+- **Frontend PRs**: `- [ ] Code in /frontend directory (or project root)` | `- [ ] TypeScript strict mode passes` | `- [ ] shadcn/ui components used (no custom CSS)` | `- [ ] Server Components by default` | `- [ ] Accessibility (WCAG 2.1 AA minimum)`
+- **Backend/Agent PRs**: `- [ ] Code in /backend directory` | `- [ ] LangGraph graph structure valid and logged` | `- [ ] Agent state schema typed (Pydantic)` | `- [ ] All tools have error handling` | `- [ ] Max iterations set with escape hatch` | `- [ ] Reasoning chain preserved for audit trail`
+- **Integration PRs**: `- [ ] Code changes respect /backend and /frontend boundaries` | `- [ ] E2E test coverage for user journey` | `- [ ] API contract stability verified` | `- [ ] No cross-layer responsibility violations`
 
 ---
 
-**Version**: 1.1.1 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01
+**Version**: 1.2.0 | **Ratified**: 2025-11-01 | **Last Amended**: 2025-11-01

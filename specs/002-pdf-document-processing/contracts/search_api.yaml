@@ -1,0 +1,267 @@
+openapi: 3.0.0
+info:
+  title: PDF Document Semantic Search API
+  version: 1.0.0
+  description: Natural language semantic search over embedded compliance documents
+  contact:
+    name: DINNR AML Platform
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: http://localhost:8000/v1
+    description: Local development server
+
+paths:
+  /documents/search:
+    post:
+      summary: Search documents by semantic similarity
+      operationId: semanticSearch
+      description: |
+        Execute semantic search against embedded documents using natural language query.
+        Returns top-K documents ranked by relevance with full metadata for audit trail.
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+            example:
+              query: "what are capital adequacy requirements"
+              k: 10
+              filters:
+                source_url_pattern: "mas.org.sg/*"
+                min_date: "2024-01-01"
+                max_date: "2025-11-01"
+      responses:
+        '200':
+          description: Successful search with results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+              example:
+                results:
+                  - document_id: "550e8400-e29b-41d4-a716-446655440001"
+                    relevance_score: 0.87
+                    source_url: "https://mas.org.sg/circular-2024-01-capital-adequacy"
+                    ingestion_date: "2025-06-15T10:30:00Z"
+                    processing_version: "1.0.0"
+                    embedding_model: "models/embedding-001"
+                    embedding_timestamp: "2025-06-15T10:35:00Z"
+                    chunk_index: 0
+                    snippet: "Capital adequacy requirements are established to ensure banks maintain sufficient capital buffers..."
+                query_embedding_timestamp: "2025-11-01T12:34:56Z"
+                execution_time_ms: 234
+        '400':
+          description: Bad request (invalid query, filter format, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized (missing or invalid API key/JWT)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - BearerAuth: [ ]
+        - ApiKeyAuth: [ ]
+
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Natural language search query (e.g., "capital adequacy requirements")
+          example: "what are the reporting deadlines"
+        k:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Number of top results to return (configurable limit)
+          example: 10
+        filters:
+          $ref: '#/components/schemas/SearchFilters'
+          description: Optional filtering criteria
+
+    SearchFilters:
+      type: object
+      description: Optional filters to narrow search results
+      properties:
+        source_url_pattern:
+          type: string
+          description: Wildcard pattern to filter by source URL (e.g., "mas.org.sg/*")
+          example: "mas.org.sg/*"
+        min_date:
+          type: string
+          format: date
+          description: Minimum ingestion date (inclusive, ISO 8601)
+          example: "2024-01-01"
+        max_date:
+          type: string
+          format: date
+          description: Maximum ingestion date (inclusive, ISO 8601)
+          example: "2025-11-01"
+        issuing_authority:
+          type: string
+          description: Filter by regulatory authority (e.g., "Monetary Authority of Singapore")
+          example: "Monetary Authority of Singapore"
+        document_type:
+          type: string
+          enum: [ circular, notice, guideline, policy, other ]
+          description: Document type filter
+          example: "circular"
+        min_relevance_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.0
+          description: Minimum relevance score threshold (0.0-1.0)
+          example: 0.5
+
+    SearchResult:
+      type: object
+      description: Individual search result with full audit trail metadata
+      required:
+        - document_id
+        - relevance_score
+        - source_url
+        - ingestion_date
+        - embedding_model
+      properties:
+        document_id:
+          type: string
+          format: uuid
+          description: Unique identifier of the document
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        relevance_score:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+          description: Cosine similarity score (0.0-1.0, higher = more relevant)
+          example: 0.87
+        source_url:
+          type: string
+          format: uri
+          description: Original source URL from crawler
+          example: "https://mas.org.sg/circular-2024-01-capital-adequacy"
+        filename:
+          type: string
+          description: Original PDF filename
+          example: "MAS_Circular_2024_01_Capital_Adequacy.pdf"
+        ingestion_date:
+          type: string
+          format: date-time
+          description: When document was crawled and ingested
+          example: "2025-06-15T10:30:00Z"
+        processing_version:
+          type: string
+          description: Version of processing pipeline used
+          example: "1.0.0"
+        embedding_model:
+          type: string
+          description: Embedding model identifier
+          example: "models/embedding-001"
+        embedding_timestamp:
+          type: string
+          format: date-time
+          description: When document was embedded
+          example: "2025-06-15T10:35:00Z"
+        chunk_index:
+          type: integer
+          minimum: 0
+          description: Chunk number (0 if full document embedding)
+          example: 0
+        snippet:
+          type: string
+          maxLength: 500
+          description: Text excerpt around the match (for preview)
+          example: "Capital adequacy requirements are established to ensure banks..."
+        regulatory_framework:
+          type: array
+          items:
+            type: string
+          description: Regulatory categories (AML, KYC, CTF, etc.)
+          example: [ "AML", "Compliance" ]
+
+    SearchResponse:
+      type: object
+      description: Response containing ranked search results
+      required:
+        - results
+        - query_embedding_timestamp
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+          description: Ranked list of matching documents
+        query_embedding_timestamp:
+          type: string
+          format: date-time
+          description: Server timestamp when query was embedded
+          example: "2025-11-01T12:34:56Z"
+        execution_time_ms:
+          type: integer
+          minimum: 0
+          description: Query execution time in milliseconds
+          example: 234
+        total_results_available:
+          type: integer
+          minimum: 0
+          description: Total number of results matching query (before k-limit)
+          example: 156
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code (e.g., INVALID_QUERY, UNAUTHORIZED, INTERNAL_ERROR)
+          example: INVALID_QUERY
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Query must be between 1 and 2000 characters"
+        details:
+          type: object
+          description: Additional error context
+          example:
+            query_length: 2500
+            max_length: 2000
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service authentication
+
+tags:
+  - name: Search
+    description: Semantic search operations over embedded documents
