@@ -176,7 +176,7 @@ export default function DocumentUploadPage() {
 
   const getRiskColor = (level: string) => {
     if (level === "Low") return "bg-green-500"
-    if (level === "Med") return "bg-yellow-500"
+    if (level === "Med") return "bg-yellow-500/50 text-yellow-950 dark:text-yellow-50 border border-yellow-500/70"
     return "bg-red-500"
   }
 
@@ -223,7 +223,7 @@ export default function DocumentUploadPage() {
 
         <div className="flex-1 overflow-y-auto p-4 pt-0">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Document Validator Pro</h1>
+            <h1 className="text-3xl font-bold mb-2">Document Validator</h1>
             <p className="text-muted-foreground">
               Comprehensive document validation with format analysis, authenticity checks, and risk scoring
             </p>
@@ -315,43 +315,49 @@ export default function DocumentUploadPage() {
         <div className="space-y-6">
           {/* Risk Score Banner */}
           <Card className={`border-2 ${result.risk_assessment.risk_level === 'Low' ? 'border-green-500' : result.risk_assessment.risk_level === 'Med' ? 'border-yellow-500' : 'border-red-500'}`}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-6 w-6" />
-                  Overall Risk Assessment
-                </CardTitle>
-                <Badge className={`${getRiskColor(result.risk_assessment.risk_level)} text-white text-lg px-4 py-2`}>
+            <CardHeader className="pb-4">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-2xl">
+                    <Shield className="h-7 w-7" />
+                    Overall Risk Assessment
+                  </CardTitle>
+                  <CardDescription className="mt-2">
+                    Comprehensive analysis of document integrity and authenticity
+                  </CardDescription>
+                </div>
+                <Badge className={`${getRiskColor(result.risk_assessment.risk_level)} text-white text-xl px-6 py-3 font-semibold self-start md:self-auto`}>
                   {result.risk_assessment.risk_level} Risk
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Overall Score</p>
-                  <p className="text-2xl font-bold">{result.risk_assessment.overall_score.toFixed(1)}/100</p>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Overall Score</p>
+                  <p className="text-4xl font-bold">{result.risk_assessment.overall_score.toFixed(1)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Format Risk</p>
-                  <p className="text-2xl font-bold">{result.risk_assessment.format_risk.toFixed(1)}/100</p>
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Format Risk</p>
+                  <p className="text-4xl font-bold">{result.risk_assessment.format_risk.toFixed(1)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Authenticity Risk</p>
-                  <p className="text-2xl font-bold">{result.risk_assessment.authenticity_risk.toFixed(1)}/100</p>
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Authenticity Risk</p>
+                  <p className="text-4xl font-bold">{result.risk_assessment.authenticity_risk.toFixed(1)}</p>
+                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
                 </div>
               </div>
 
               {result.risk_assessment.justifications.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Risk Justifications:</h4>
-                  <div className="space-y-2">
+                <div className="pt-2">
+                  <h4 className="text-sm font-semibold mb-3 uppercase tracking-wide text-muted-foreground">Risk Factors</h4>
+                  <div className="space-y-3">
                     {result.risk_assessment.justifications.slice(0, 5).map((just, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-sm">
-                        <Badge variant="outline" className="mt-0.5">
-                          Severity: {just.severity}
-                        </Badge>
-                        <span>[{just.category}] {just.reason}</span>
+                      <div key={idx} className="p-3 rounded-lg border bg-muted/20">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{just.category}</span>
+                        <p className="text-sm mt-0.5">{just.reason}</p>
                       </div>
                     ))}
                   </div>
@@ -362,38 +368,41 @@ export default function DocumentUploadPage() {
 
           {/* Format Analysis */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <FileText className="h-6 w-6" />
                 Format Analysis
               </CardTitle>
+              <CardDescription className="mt-2">
+                Document structure and formatting quality metrics
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Word Count</p>
-                  <p className="text-xl font-bold">{result.format_analysis.word_count}</p>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Word Count</p>
+                  <p className="text-3xl font-bold">{result.format_analysis.word_count}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Spelling Error Rate</p>
-                  <p className="text-xl font-bold">{(result.format_analysis.spell_error_rate * 100).toFixed(1)}%</p>
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Spelling Errors</p>
+                  <p className="text-3xl font-bold">{(result.format_analysis.spell_error_rate * 100).toFixed(1)}%</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Double Spaces</p>
-                  <p className="text-xl font-bold">{result.format_analysis.double_space_count}</p>
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Double Spaces</p>
+                  <p className="text-3xl font-bold">{result.format_analysis.double_space_count}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Section Coverage</p>
-                  <p className="text-xl font-bold">{(result.format_analysis.section_coverage * 100).toFixed(0)}%</p>
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Coverage</p>
+                  <p className="text-3xl font-bold">{(result.format_analysis.section_coverage * 100).toFixed(0)}%</p>
                 </div>
               </div>
 
               {result.format_analysis.missing_sections.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-semibold mb-2">Missing Sections:</h4>
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 uppercase tracking-wide text-muted-foreground">Missing Sections</h4>
                   <div className="flex flex-wrap gap-2">
                     {result.format_analysis.missing_sections.map((section, idx) => (
-                      <Badge key={idx} variant="destructive">
+                      <Badge key={idx} className="bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30">
                         <XCircle className="h-3 w-3 mr-1" />
                         {section}
                       </Badge>
@@ -408,13 +417,13 @@ export default function DocumentUploadPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowText(!showText)}
-                    className="mb-2"
+                    className="mb-3"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     {showText ? 'Hide' : 'Show'} Extracted Text
                   </Button>
                   {showText && (
-                    <div className="max-h-64 overflow-y-auto border rounded p-4 bg-muted/50">
+                    <div className="max-h-64 overflow-y-auto border rounded-lg p-4 bg-muted/30">
                       {highlightText(result.format_analysis.extracted_text, result.format_analysis)}
                     </div>
                   )}
@@ -437,7 +446,7 @@ export default function DocumentUploadPage() {
                 {result.authenticity_check.exif && (
                   <div>
                     <h4 className="font-semibold mb-2">EXIF Metadata</h4>
-                    <Badge className={result.authenticity_check.exif.present ? "bg-green-500" : "bg-red-500"}>
+                    <Badge className={result.authenticity_check.exif.present ? "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30" : "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"}>
                       {result.authenticity_check.exif.present ? "Present" : "Missing"}
                     </Badge>
                     {result.authenticity_check.exif.anomalies.length > 0 && (
@@ -462,7 +471,7 @@ export default function DocumentUploadPage() {
                 {result.authenticity_check.ela && (
                   <div>
                     <h4 className="font-semibold mb-2">Tampering Detection (ELA)</h4>
-                    <Badge className={result.authenticity_check.ela.anomaly_detected ? "bg-red-500" : "bg-green-500"}>
+                    <Badge className={result.authenticity_check.ela.anomaly_detected ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" : "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"}>
                       {result.authenticity_check.ela.anomaly_detected ? "Tampering Detected" : "No Tampering"}
                     </Badge>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -475,7 +484,7 @@ export default function DocumentUploadPage() {
                 {result.authenticity_check.ai_generation && result.authenticity_check.ai_generation.likelihood > 0.3 && (
                   <div>
                     <h4 className="font-semibold mb-2">AI Generation Detection</h4>
-                    <Badge className={result.authenticity_check.ai_generation.likelihood > 0.6 ? "bg-red-500" : "bg-yellow-500"}>
+                    <Badge className={result.authenticity_check.ai_generation.likelihood > 0.6 ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" : "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"}>
                       <Zap className="h-3 w-3 mr-1" />
                       {(result.authenticity_check.ai_generation.likelihood * 100).toFixed(0)}% likelihood
                     </Badge>
@@ -492,8 +501,8 @@ export default function DocumentUploadPage() {
                   <div>
                     <h4 className="font-semibold mb-2">Reverse Image Search</h4>
                     <Badge className={
-                      result.authenticity_check.reverse_search.authenticity_risk === "High" ? "bg-red-500" :
-                      result.authenticity_check.reverse_search.authenticity_risk === "Med" ? "bg-yellow-500" : "bg-green-500"
+                      result.authenticity_check.reverse_search.authenticity_risk === "High" ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" :
+                      result.authenticity_check.reverse_search.authenticity_risk === "Med" ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30" : "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
                     }>
                       <Search className="h-3 w-3 mr-1" />
                       {result.authenticity_check.reverse_search.total_matches} matches found
