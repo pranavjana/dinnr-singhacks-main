@@ -78,6 +78,21 @@ interface Transaction {
   [key: string]: any
 }
 
+const extractSenderNames = (records: unknown): string[] => {
+  if (!Array.isArray(records)) {
+    return []
+  }
+  return records
+    .map((item) => {
+      if (item && typeof item === "object" && "originator_name" in item) {
+        const name = (item as { originator_name?: unknown }).originator_name
+        return typeof name === "string" ? name : null
+      }
+      return null
+    })
+    .filter((name): name is string => Boolean(name))
+}
+
 export default function Page() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -489,15 +504,16 @@ export default function Page() {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
-      const searchableFields = [
-        transaction.merchant,
+      const notableSenders = extractSenderNames(transaction.verdict?.notable_transactions)
+      const flaggedSenders = extractSenderNames(transaction.verdict?.llm_flagged_transactions)
+      const senderCandidates = [
         transaction.originator_name,
-        transaction.beneficiary_name,
-        transaction.payment_id,
-        transaction.trace_id,
-      ].filter(Boolean).map(f => f?.toString().toLowerCase() || "")
+        transaction.merchant,
+        ...notableSenders,
+        ...flaggedSenders,
+      ].filter((name): name is string => Boolean(name))
 
-      if (!searchableFields.some(field => field.includes(query))) {
+      if (!senderCandidates.some((name) => name.toLowerCase().includes(query))) {
         return false
       }
     }
@@ -665,7 +681,7 @@ export default function Page() {
               <div className="relative ml-auto">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search transactions..."
+                  placeholder="Search by sender name"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 w-[350px]"
@@ -688,6 +704,7 @@ export default function Page() {
                   <div className="flex flex-col">
                     {/* Column Headers */}
                     <div className="sticky top-0 z-10 flex items-center px-4 py-3 text-xs font-semibold text-muted-foreground border-b backdrop-blur-[11.9px] bg-muted/90">
+                      <div className="flex-[1.5]">PEOPLE</div>
                       <div className="flex-[1.2]">PAYMENT METHOD</div>
                       <div
                         className="flex-[1.2] flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
@@ -716,7 +733,6 @@ export default function Page() {
                           sortDirection === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
                         )}
                       </div>
-                      <div className="flex-[1.5]">PEOPLE</div>
                       <div className="flex-[1.5]">ACTIONS TAKEN</div>
                       <div
                         className="flex-[1.3] flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
@@ -741,6 +757,13 @@ export default function Page() {
                             className="flex items-center px-4 py-3 cursor-pointer transition-all hover:bg-muted/30"
                             onClick={() => toggleCard(index)}
                           >
+                            {/* PEOPLE */}
+                            <div className="flex-[1.5]">
+                              <span className="text-sm truncate block">
+                                {transaction.originator_name || transaction.merchant || 'Unknown'}
+                              </span>
+                            </div>
+
                             {/* PAYMENT METHOD */}
                             <div className="flex-[1.2]">
                               <span className="text-sm">
@@ -821,13 +844,6 @@ export default function Page() {
                               ) : (
                                 <span className="text-sm text-muted-foreground">N/A</span>
                               )}
-                            </div>
-
-                            {/* PEOPLE */}
-                            <div className="flex-[1.5]">
-                              <span className="text-sm truncate block">
-                                {transaction.originator_name || transaction.merchant || 'Unknown'}
-                              </span>
                             </div>
 
                             {/* ACTIONS TAKEN */}
