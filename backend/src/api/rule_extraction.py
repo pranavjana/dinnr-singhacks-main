@@ -218,6 +218,7 @@ async def get_compliance_rules(
             formatted_rule = {
                 "id": rule["id"],
                 "rule_type": rule["rule_type"],
+                "description": rule.get("description") or "",
                 "jurisdiction": rule["jurisdiction"],
                 "regulator": rule["regulator"],
                 "applies_to": rule_data.get("applies_to", []),
@@ -226,7 +227,9 @@ async def get_compliance_rules(
                 "extraction_confidence": rule["extraction_confidence"],
                 "effective_date": rule.get("effective_date"),
                 "circular_number": rule.get("circular_number"),
-                "validation_status": rule["validation_status"]
+                "validation_status": rule["validation_status"],
+                "created_at": rule.get("created_at"),
+                "updated_at": rule.get("updated_at"),
             }
             formatted_rules.append(formatted_rule)
 

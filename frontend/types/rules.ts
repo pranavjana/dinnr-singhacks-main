@@ -9,15 +9,18 @@ export type ExtractionStatus = 'completed' | 'partial' | 'failed'
 export interface ComplianceRule {
   id: string
   rule_type: string
+  description?: string
   jurisdiction: string
   regulator: string
   applies_to: string[]
-  rule_details: Record<string, any>
+  rule_details: Record<string, unknown>
   source_text: string
   extraction_confidence: number
   effective_date?: string
   circular_number?: string
   validation_status: ValidationStatus
+  created_at?: string
+  updated_at?: string
 }
 
 export interface ExtractionResponse {
