@@ -71,3 +71,4 @@ logs/
 *.bak
 
 newproject-476920-7f921ad85696.json
+.DS_Store
