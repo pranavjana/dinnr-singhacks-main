@@ -21,7 +21,23 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Shield, Search, Eye, Zap } from 'lucide-react'
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Shield, Search, Eye, Zap, Filter, Paperclip, ArrowUp, Download, FileCheck, ChevronDown, ChevronUp } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 // TypeScript interfaces matching backend models
 interface FormatAnalysis {
@@ -95,10 +111,72 @@ export default function DocumentUploadPage() {
   const [result, setResult] = useState<ComprehensiveResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showText, setShowText] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedDocType, setSelectedDocType] = useState('all')
+  const [selectedDate, setSelectedDate] = useState('all')
+  const [selectedStaff, setSelectedStaff] = useState('all')
+  const [selectedRegion, setSelectedRegion] = useState('all')
+  const [isDragging, setIsDragging] = useState(false)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [auditTrail, setAuditTrail] = useState<any[]>([])
+  const [loadingAudit, setLoadingAudit] = useState(false)
+  const [isRiskAssessmentExpanded, setIsRiskAssessmentExpanded] = useState(true)
+  const [selectedAuditDoc, setSelectedAuditDoc] = useState<any>(null)
+  const [showAuditDetail, setShowAuditDetail] = useState(false)
 
   useEffect(() => {
     handleDocTypeChange(docType)
+    fetchAuditTrail()
   }, [])
+
+  const fetchAuditTrail = async () => {
+    setLoadingAudit(true)
+    try {
+      const response = await fetch('/api/v1/documents/audit')
+      if (response.ok) {
+        const data = await response.json()
+        setAuditTrail(data.data || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch audit trail:', err)
+    } finally {
+      setLoadingAudit(false)
+    }
+  }
+
+  const saveToAuditTrail = async (analysisResult: ComprehensiveResult, fileName: string, fileSize: number, fileType: string) => {
+    try {
+      await fetch('/api/v1/documents/audit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          document_name: fileName,
+          document_type: fileType.split('/')[1] || 'unknown',
+          file_size_kb: (fileSize / 1024),
+          uploaded_by: 'Helen Derinlacs',
+          overall_risk_score: analysisResult.risk_assessment.overall_score,
+          risk_level: analysisResult.risk_assessment.risk_level,
+          format_risk: analysisResult.risk_assessment.format_risk,
+          authenticity_risk: analysisResult.risk_assessment.authenticity_risk,
+          word_count: analysisResult.format_analysis.word_count,
+          spell_error_rate: analysisResult.format_analysis.spell_error_rate,
+          section_coverage: analysisResult.format_analysis.section_coverage,
+          status: 'Complete',
+          doc_subtype: subtype,
+          risk_justifications: analysisResult.risk_assessment.justifications,
+          format_analysis: analysisResult.format_analysis,
+          authenticity_check: analysisResult.authenticity_check
+        })
+      })
+      // Refresh audit trail
+      fetchAuditTrail()
+    } catch (err) {
+      console.error('Failed to save to audit trail:', err)
+    }
+  }
 
   const handleDocTypeChange = async (newDocType: string) => {
     setDocType(newDocType)
@@ -128,12 +206,75 @@ export default function DocumentUploadPage() {
       if (!validTypes.includes(fileExt)) {
         setError('Invalid file type. Please upload PDF, DOCX, PNG, or JPG files.')
         setFile(null)
+        setFilePreview(null)
         return
       }
 
       setFile(selectedFile)
       setError(null)
       setResult(null)
+
+      // Create preview for images
+      if (['.png', '.jpg', '.jpeg'].includes(fileExt)) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string)
+        }
+        reader.readAsDataURL(selectedFile)
+      } else if (fileExt === '.pdf') {
+        // For PDFs, create an object URL
+        const objectUrl = URL.createObjectURL(selectedFile)
+        setFilePreview(objectUrl)
+      } else {
+        setFilePreview(null)
+      }
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+
+    const droppedFile = e.dataTransfer.files?.[0]
+    if (droppedFile) {
+      const validTypes = ['.pdf', '.docx', '.png', '.jpg', '.jpeg']
+      const fileExt = '.' + droppedFile.name.split('.').pop()?.toLowerCase()
+
+      if (!validTypes.includes(fileExt)) {
+        setError('Invalid file type. Please upload PDF, DOCX, PNG, or JPG files.')
+        setFile(null)
+        setFilePreview(null)
+        return
+      }
+
+      setFile(droppedFile)
+      setError(null)
+      setResult(null)
+
+      // Create preview for images
+      if (['.png', '.jpg', '.jpeg'].includes(fileExt)) {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string)
+        }
+        reader.readAsDataURL(droppedFile)
+      } else if (fileExt === '.pdf') {
+        // For PDFs, create an object URL
+        const objectUrl = URL.createObjectURL(droppedFile)
+        setFilePreview(objectUrl)
+      } else {
+        setFilePreview(null)
+      }
     }
   }
 
@@ -167,6 +308,11 @@ export default function DocumentUploadPage() {
 
       const data = await response.json()
       setResult(data)
+
+      // Save to audit trail
+      if (file) {
+        await saveToAuditTrail(data, file.name, file.size, file.type)
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
@@ -222,87 +368,212 @@ export default function DocumentUploadPage() {
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 pt-0">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Document Validator</h1>
-            <p className="text-muted-foreground">
-              Comprehensive document validation with format analysis, authenticity checks, and risk scoring
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold mb-2">Document Details</h1>
+            <p className="text-muted-foreground text-sm">
+              The most important feature in the product editing section is the product adding part. When adding products here, do not ignore to fill in all the required fields completely and follow the product adding rules.
             </p>
           </div>
 
-      {/* Upload Section */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Upload Document</CardTitle>
-          <CardDescription>
-            Supported formats: PDF, DOCX, PNG, JPG (max 10MB)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Document Type</label>
-            <Select value={docType} onValueChange={handleDocTypeChange}>
+          {/* Search and Action Buttons */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search for document"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="gap-2">
+                <Filter className="h-4 w-4" />
+                Filters
+              </Button>
+              <Button variant="outline" className="gap-2">
+                <Paperclip className="h-4 w-4" />
+                Attachment
+              </Button>
+            </div>
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="mb-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="contract">Contract</SelectItem>
-                <SelectItem value="report">Report</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
+                <SelectItem value="contracts">Contracts</SelectItem>
+                <SelectItem value="reports">Reports</SelectItem>
+                <SelectItem value="invoices">Invoices</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Document Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="doc">Doc</SelectItem>
+                <SelectItem value="pdf">PDF</SelectItem>
+                <SelectItem value="image">Image</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedDate} onValueChange={setSelectedDate}>
+              <SelectTrigger>
+                <SelectValue placeholder="Document Date" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dates</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+              <SelectTrigger>
+                <SelectValue placeholder="Staff" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Staff</SelectItem>
+                <SelectItem value="braun">Braun Henry</SelectItem>
+                <SelectItem value="salih">Salih Demirci</SelectItem>
+                <SelectItem value="john">John Benjamin</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+              <SelectTrigger>
+                <SelectValue placeholder="Region" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Regions</SelectItem>
+                <SelectItem value="new-hampshire">New Hampshire</SelectItem>
+                <SelectItem value="california">California</SelectItem>
+                <SelectItem value="texas">Texas</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {subtypes.length > 0 && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Document Subtype</label>
-              <Select value={subtype} onValueChange={setSubtype}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {subtypes.map((st) => (
-                    <SelectItem key={st} value={st}>
-                      {st.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Upload Box or Preview */}
+          {!file ? (
+            <div
+              className={`mb-6 border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+                isDragging
+                  ? 'border-primary bg-primary/5'
+                  : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <Upload className="h-16 w-16 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Drop your documents here, or{' '}
+                    <label className="text-primary hover:underline cursor-pointer">
+                      click to browse
+                      <input
+                        type="file"
+                        onChange={handleFileChange}
+                        accept=".pdf,.docx,.png,.jpg,.jpeg"
+                        className="hidden"
+                      />
+                    </label>
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6">
+              <Card>
+                <CardContent className="p-6">
+                  {/* File info header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-8 w-8 text-primary flex-shrink-0 mt-1" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-semibold truncate">{file.name}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {(file.size / 1024).toFixed(1)} KB • {file.type || 'Unknown type'}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setFile(null)
+                        setFilePreview(null)
+                        setResult(null)
+                        setError(null)
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+
+                  {/* File preview */}
+                  <div className="mt-4">
+                    {filePreview && file.type.startsWith('image/') && (
+                      <div className="border rounded-lg overflow-hidden bg-muted/30">
+                        <img
+                          src={filePreview}
+                          alt="Document preview"
+                          className="w-full h-auto max-h-96 object-contain"
+                        />
+                      </div>
+                    )}
+                    {filePreview && file.type === 'application/pdf' && (
+                      <div className="border rounded-lg overflow-hidden bg-muted/30">
+                        <iframe
+                          src={filePreview}
+                          className="w-full h-96"
+                          title="PDF preview"
+                        />
+                      </div>
+                    )}
+                    {!filePreview && (
+                      <div className="border-2 border-dashed rounded-lg p-8 text-center bg-muted/30">
+                        <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Preview not available for this file type
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="mt-4 flex justify-center">
+                <Button
+                  onClick={handleUpload}
+                  disabled={loading}
+                  size="lg"
+                  className="w-full md:w-auto"
+                >
+                  {loading ? (
+                    <>Analyzing...</>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Analyze Document
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">File</label>
-            <div className="flex items-center gap-4">
-              <input
-                type="file"
-                onChange={handleFileChange}
-                accept=".pdf,.docx,.png,.jpg,.jpeg"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-              />
-            </div>
-            {file && (
-              <p className="text-sm text-muted-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                {file.name} ({(file.size / 1024).toFixed(1)} KB)
-              </p>
-            )}
-          </div>
-
-          <Button
-            onClick={handleUpload}
-            disabled={!file || loading}
-            className="w-full"
-          >
-            {loading ? (
-              <>Analyzing...</>
-            ) : (
-              <>
-                <Upload className="mr-2 h-4 w-4" />
-                Analyze Document
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
 
       {error && (
         <Alert variant="destructive" className="mb-6">
@@ -314,57 +585,156 @@ export default function DocumentUploadPage() {
       {result && (
         <div className="space-y-6">
           {/* Risk Score Banner */}
-          <Card className={`border-2 ${result.risk_assessment.risk_level === 'Low' ? 'border-green-500' : result.risk_assessment.risk_level === 'Med' ? 'border-yellow-500' : 'border-red-500'}`}>
-            <CardHeader className="pb-4">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-2xl">
-                    <Shield className="h-7 w-7" />
-                    Overall Risk Assessment
-                  </CardTitle>
-                  <CardDescription className="mt-2">
-                    Comprehensive analysis of document integrity and authenticity
-                  </CardDescription>
+          <div className="rounded-xl border bg-muted/40 overflow-hidden">
+            {/* Header Section */}
+            <button
+              onClick={() => setIsRiskAssessmentExpanded(!isRiskAssessmentExpanded)}
+              className="w-full px-6 py-5 border-b bg-muted/50 hover:bg-muted/60 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    result.risk_assessment.risk_level === 'Low'
+                      ? 'bg-green-500/10'
+                      : result.risk_assessment.risk_level === 'Med'
+                      ? 'bg-yellow-500/10'
+                      : 'bg-red-500/10'
+                  }`}>
+                    <Shield className={`h-5 w-5 ${
+                      result.risk_assessment.risk_level === 'Low'
+                        ? 'text-green-600 dark:text-green-400'
+                        : result.risk_assessment.risk_level === 'Med'
+                        ? 'text-yellow-600 dark:text-yellow-400'
+                        : 'text-red-600 dark:text-red-400'
+                    }`} />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-lg font-semibold">Overall Risk Assessment</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Last analyzed {new Date().toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <Badge className={`${getRiskColor(result.risk_assessment.risk_level)} text-white text-xl px-6 py-3 font-semibold self-start md:self-auto`}>
-                  {result.risk_assessment.risk_level} Risk
-                </Badge>
+                <div className="flex items-center gap-3">
+                  <Badge className={`${getRiskColor(result.risk_assessment.risk_level)} px-4 py-1.5 text-sm font-medium`}>
+                    {result.risk_assessment.risk_level} Risk
+                  </Badge>
+                  {isRiskAssessmentExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Overall Score</p>
-                  <p className="text-4xl font-bold">{result.risk_assessment.overall_score.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
+            </button>
+
+            {/* Metrics Grid */}
+            {isRiskAssessmentExpanded && (
+              <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Overall Score</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{result.risk_assessment.overall_score.toFixed(1)}</span>
+                        <span className="text-sm text-muted-foreground">/100</span>
+                      </div>
+                    </div>
+                    <div className={`h-2 w-2 rounded-full ${
+                      result.risk_assessment.risk_level === 'Low'
+                        ? 'bg-green-500'
+                        : result.risk_assessment.risk_level === 'Med'
+                        ? 'bg-yellow-500'
+                        : 'bg-red-500'
+                    }`} />
+                  </div>
+                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${
+                        result.risk_assessment.risk_level === 'Low'
+                          ? 'bg-green-500'
+                          : result.risk_assessment.risk_level === 'Med'
+                          ? 'bg-yellow-500'
+                          : 'bg-red-500'
+                      }`}
+                      style={{ width: `${result.risk_assessment.overall_score}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Format Risk</p>
-                  <p className="text-4xl font-bold">{result.risk_assessment.format_risk.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
+
+                <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Format Risk</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{result.risk_assessment.format_risk.toFixed(1)}</span>
+                        <span className="text-sm text-muted-foreground">/100</span>
+                      </div>
+                    </div>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 transition-all"
+                      style={{ width: `${result.risk_assessment.format_risk}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Authenticity Risk</p>
-                  <p className="text-4xl font-bold">{result.risk_assessment.authenticity_risk.toFixed(1)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">out of 100</p>
+
+                <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Authenticity Risk</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{result.risk_assessment.authenticity_risk.toFixed(1)}</span>
+                        <span className="text-sm text-muted-foreground">/100</span>
+                      </div>
+                    </div>
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-purple-500 transition-all"
+                      style={{ width: `${result.risk_assessment.authenticity_risk}%` }}
+                    />
+                  </div>
                 </div>
               </div>
 
               {result.risk_assessment.justifications.length > 0 && (
-                <div className="pt-2">
-                  <h4 className="text-sm font-semibold mb-3 uppercase tracking-wide text-muted-foreground">Risk Factors</h4>
+                <div className="rounded-lg border bg-background p-5">
+                  <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                    <div className="p-1.5 rounded-md bg-orange-500/10">
+                      <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-semibold">Risk Factors Detected</h4>
+                      <p className="text-xs text-muted-foreground">{result.risk_assessment.justifications.length} issues identified</p>
+                    </div>
+                  </div>
                   <div className="space-y-3">
                     {result.risk_assessment.justifications.slice(0, 5).map((just, idx) => (
-                      <div key={idx} className="p-3 rounded-lg border bg-muted/20">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{just.category}</span>
-                        <p className="text-sm mt-0.5">{just.reason}</p>
+                      <div key={idx} className="flex items-start gap-3 py-2">
+                        <div className="flex-shrink-0 mt-1.5">
+                          <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">{just.category}</span>
+                            <span className="text-xs text-muted-foreground">•</span>
+                            <span className="text-xs text-muted-foreground">Severity: {just.severity || 'Medium'}</span>
+                          </div>
+                          <p className="text-sm text-foreground leading-relaxed">{just.reason}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
 
           {/* Format Analysis */}
           <Card>
@@ -544,7 +914,313 @@ export default function DocumentUploadPage() {
           )}
         </div>
       )}
+
+          {/* Document Audit Trail Table */}
+          <div className="mt-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold flex items-center gap-2">
+                <FileCheck className="h-6 w-6" />
+                Document Audit Trail
+              </h2>
+              <p className="text-muted-foreground text-sm mt-2">
+                History of all document uploads and analysis results
+              </p>
+            </div>
+            <div>
+              {loadingAudit ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading audit trail...
+                </div>
+              ) : auditTrail.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No documents analyzed yet. Upload a document to get started.
+                </div>
+              ) : (
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">
+                          <input type="checkbox" className="rounded" />
+                        </TableHead>
+                        <TableHead>Document Name</TableHead>
+                        <TableHead>Document Type</TableHead>
+                        <TableHead>Document Date</TableHead>
+                        <TableHead>Staff</TableHead>
+                        <TableHead>Region</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Risk Level</TableHead>
+                        <TableHead className="text-right">Operation</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {auditTrail.map((doc) => (
+                        <TableRow key={doc.id}>
+                          <TableCell>
+                            <input type="checkbox" className="rounded" />
+                          </TableCell>
+                          <TableCell className="font-medium">{doc.document_name}</TableCell>
+                          <TableCell className="capitalize">{doc.document_type}</TableCell>
+                          <TableCell>
+                            {new Date(doc.upload_date).toLocaleDateString('en-US', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </TableCell>
+                          <TableCell>{doc.uploaded_by}</TableCell>
+                          <TableCell>-</TableCell>
+                          <TableCell>
+                            <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">
+                              {doc.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRiskColor(doc.risk_level)}>
+                              {doc.risk_level} Risk
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setSelectedAuditDoc(doc)
+                                  setShowAuditDetail(true)
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <FileCheck className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <AlertCircle className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {auditTrail.length > 0 && (
+                <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+                  <div>1-{Math.min(auditTrail.length, 10)} of {auditTrail.length} documents</div>
+                  <div className="flex items-center gap-2">
+                    <span>You're on page</span>
+                    <Select defaultValue="1">
+                      <SelectTrigger className="w-16 h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      →
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
+
+        {/* Audit Document Detail Dialog */}
+        <Dialog open={showAuditDetail} onOpenChange={setShowAuditDetail}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Document Risk Assessment
+              </DialogTitle>
+              <DialogDescription>
+                Detailed analysis for {selectedAuditDoc?.document_name}
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedAuditDoc && (
+              <div className="space-y-6 mt-4">
+                {/* Risk Assessment Summary */}
+                <div className="rounded-lg border bg-muted/40 p-5">
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${
+                        selectedAuditDoc.risk_level === 'Low'
+                          ? 'bg-green-500/10'
+                          : selectedAuditDoc.risk_level === 'Med'
+                          ? 'bg-yellow-500/10'
+                          : 'bg-red-500/10'
+                      }`}>
+                        <Shield className={`h-5 w-5 ${
+                          selectedAuditDoc.risk_level === 'Low'
+                            ? 'text-green-600 dark:text-green-400'
+                            : selectedAuditDoc.risk_level === 'Med'
+                            ? 'text-yellow-600 dark:text-yellow-400'
+                            : 'text-red-600 dark:text-red-400'
+                        }`} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold">Overall Risk Assessment</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Analyzed on {new Date(selectedAuditDoc.upload_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={`${getRiskColor(selectedAuditDoc.risk_level)} px-4 py-1.5 text-sm font-medium`}>
+                      {selectedAuditDoc.risk_level} Risk
+                    </Badge>
+                  </div>
+
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="rounded-lg border bg-background p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Overall Score</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-bold tracking-tight">{selectedAuditDoc.overall_risk_score?.toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground">/100</span>
+                          </div>
+                        </div>
+                        <div className={`h-2 w-2 rounded-full ${
+                          selectedAuditDoc.risk_level === 'Low'
+                            ? 'bg-green-500'
+                            : selectedAuditDoc.risk_level === 'Med'
+                            ? 'bg-yellow-500'
+                            : 'bg-red-500'
+                        }`} />
+                      </div>
+                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            selectedAuditDoc.risk_level === 'Low'
+                              ? 'bg-green-500'
+                              : selectedAuditDoc.risk_level === 'Med'
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
+                          }`}
+                          style={{ width: `${selectedAuditDoc.overall_risk_score}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-background p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Format Risk</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-bold tracking-tight">{selectedAuditDoc.format_risk?.toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground">/100</span>
+                          </div>
+                        </div>
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 transition-all"
+                          style={{ width: `${selectedAuditDoc.format_risk}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border bg-background p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Authenticity Risk</p>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-2xl font-bold tracking-tight">{selectedAuditDoc.authenticity_risk?.toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground">/100</span>
+                          </div>
+                        </div>
+                        <Search className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-500 transition-all"
+                          style={{ width: `${selectedAuditDoc.authenticity_risk}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Risk Factors */}
+                  {selectedAuditDoc.risk_justifications && selectedAuditDoc.risk_justifications.length > 0 && (
+                    <div className="mt-6 rounded-lg border bg-background p-4">
+                      <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+                        <div className="p-1 rounded-md bg-orange-500/10">
+                          <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">Risk Factors Detected</h4>
+                          <p className="text-xs text-muted-foreground">{selectedAuditDoc.risk_justifications.length} issues identified</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {selectedAuditDoc.risk_justifications.slice(0, 5).map((just: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-3 py-2">
+                            <div className="flex-shrink-0 mt-1.5">
+                              <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">{just.category}</span>
+                                <span className="text-xs text-muted-foreground">•</span>
+                                <span className="text-xs text-muted-foreground">Severity: {just.severity || 'Medium'}</span>
+                              </div>
+                              <p className="text-sm text-foreground leading-relaxed">{just.reason}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Document Info */}
+                <div className="rounded-lg border bg-background p-4">
+                  <h4 className="text-sm font-semibold mb-3">Document Information</h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Document Name</p>
+                      <p className="font-medium">{selectedAuditDoc.document_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Document Type</p>
+                      <p className="font-medium capitalize">{selectedAuditDoc.document_type}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">File Size</p>
+                      <p className="font-medium">{selectedAuditDoc.file_size_kb?.toFixed(2)} KB</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Uploaded By</p>
+                      <p className="font-medium">{selectedAuditDoc.uploaded_by}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Upload Date</p>
+                      <p className="font-medium">{new Date(selectedAuditDoc.upload_date).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">
+                        {selectedAuditDoc.status}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   )
