@@ -84,7 +84,7 @@ async def upload_and_analyze_document(
             detail=f"File too large. Maximum size: {MAX_FILE_SIZE / 1024 / 1024}MB"
         )
 
-    # Extract text
+    # Extract text from document
     try:
         text = document_service.extract_text(content, file_ext or ".pdf")
     except ValueError as e:
@@ -105,7 +105,7 @@ async def upload_and_analyze_document(
             detail="No text could be extracted from the document"
         )
 
-    # Analyze format with text included for highlighting
+    # Analyze format
     try:
         format_result = document_service.analyze_format(text, doc_type, subtype, include_text=True)
     except Exception as e:

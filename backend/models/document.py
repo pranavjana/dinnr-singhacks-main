@@ -2,8 +2,31 @@
 Document analysis models.
 """
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+
+
+class BoundingBox(BaseModel):
+    """Bounding box coordinates for text region."""
+    left: float = Field(..., description="Left X coordinate")
+    top: float = Field(..., description="Top Y coordinate")
+    right: float = Field(..., description="Right X coordinate")
+    bottom: float = Field(..., description="Bottom Y coordinate")
+    page: int = Field(..., description="Page number (1-indexed)")
+
+
+class TextRegion(BaseModel):
+    """Text region with coordinates."""
+    text: str = Field(..., description="Text content")
+    bbox: List[float] = Field(..., description="Bounding box [left, top, right, bottom]")
+    page: int = Field(..., description="Page number")
+    confidence: Optional[float] = Field(None, description="OCR confidence (0-1)")
+
+
+class IssueCoordinates(BaseModel):
+    """Coordinates for a specific issue."""
+    issue_type: str = Field(..., description="Type of issue (double_spaces, spelling_error, etc)")
+    regions: List[TextRegion] = Field(default_factory=list, description="Regions where issue occurs")
 
 
 class FormatAnalysisResult(BaseModel):
@@ -17,6 +40,9 @@ class FormatAnalysisResult(BaseModel):
     missing_sections: list[str] = Field(default_factory=list, description="Required sections missing from document")
     section_coverage: float = Field(default=1.0, description="Percentage of required sections present", ge=0, le=1)
     extracted_text: Optional[str] = Field(None, description="Full extracted text for highlighting")
+    issue_coordinates: List[IssueCoordinates] = Field(default_factory=list, description="Coordinates of detected issues")
+    words: List[TextRegion] = Field(default_factory=list, description="All words with coordinates")
+    pages: int = Field(1, description="Total number of pages")
 
 
 class ExifData(BaseModel):

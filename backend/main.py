@@ -200,6 +200,23 @@ except Exception as e:
     import traceback
     traceback.print_exc()
 
+# Document audit trail endpoints
+try:
+    try:
+        from backend.routers import document_audit
+    except ModuleNotFoundError:
+        from routers import document_audit
+
+    app.include_router(
+        document_audit.router,
+        tags=["Document Audit Trail"]
+    )
+    logger.info("Document audit trail endpoints registered successfully")
+except Exception as e:
+    logger.error(f"Failed to load document audit trail endpoints: {e}")
+    import traceback
+    traceback.print_exc()
+
 
 if __name__ == "__main__":
     import uvicorn
