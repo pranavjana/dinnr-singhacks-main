@@ -122,6 +122,8 @@ export default function DocumentUploadPage() {
   const [auditTrail, setAuditTrail] = useState<any[]>([])
   const [loadingAudit, setLoadingAudit] = useState(false)
   const [isRiskAssessmentExpanded, setIsRiskAssessmentExpanded] = useState(true)
+  const [isFormatAnalysisExpanded, setIsFormatAnalysisExpanded] = useState(true)
+  const [isAuthenticityExpanded, setIsAuthenticityExpanded] = useState(true)
   const [selectedAuditDoc, setSelectedAuditDoc] = useState<any>(null)
   const [showAuditDetail, setShowAuditDetail] = useState(false)
 
@@ -326,25 +328,6 @@ export default function DocumentUploadPage() {
     return "bg-red-500"
   }
 
-  const highlightText = (text: string, format: FormatAnalysis) => {
-    if (!text) return null
-
-    // Simple highlighting for demo - mark double spaces
-    const parts = text.split('  ')
-    return (
-      <div className="whitespace-pre-wrap font-mono text-sm">
-        {parts.map((part, idx) => (
-          <span key={idx}>
-            {part}
-            {idx < parts.length - 1 && (
-              <span className="bg-yellow-200 dark:bg-yellow-900">  </span>
-            )}
-          </span>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -367,105 +350,58 @@ export default function DocumentUploadPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 pt-0">
+        <div className="flex-1 flex flex-col p-4 pt-0 overflow-y-auto">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-2xl font-bold tracking-tight">Document Validator</h1>
+          </div>
+
+          {/* Document Type Selection */}
           <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2">Document Details</h1>
-            <p className="text-muted-foreground text-sm">
-              The most important feature in the product editing section is the product adding part. When adding products here, do not ignore to fill in all the required fields completely and follow the product adding rules.
-            </p>
-          </div>
+            <div className="flex items-center gap-3">
+              {/* Document Type Filter */}
+              <Select value={docType} onValueChange={handleDocTypeChange}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Document Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contract">Contract</SelectItem>
+                  <SelectItem value="report">Report</SelectItem>
+                </SelectContent>
+              </Select>
 
-          {/* Search and Action Buttons */}
-          <div className="mb-6 flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search for document"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+              {/* Subtype Filter */}
+              <Select
+                value={subtype}
+                onValueChange={setSubtype}
+                disabled={subtypes.length === 0}
+              >
+                <SelectTrigger className="w-[220px]">
+                  <SelectValue placeholder={subtypes.length === 0 ? "Loading..." : "Select Subtype"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {subtypes.map((st) => (
+                    <SelectItem key={st} value={st} className="capitalize">
+                      {st.replace(/_/g, ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {subtype && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-medium text-primary capitalize">{docType}</span>
+                  <span className="text-primary/60">•</span>
+                  <span className="text-sm font-medium text-primary capitalize">{subtype.replace(/_/g, ' ')}</span>
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filters
-              </Button>
-              <Button variant="outline" className="gap-2">
-                <Paperclip className="h-4 w-4" />
-                Attachment
-              </Button>
-            </div>
-          </div>
-
-          {/* Filter Dropdowns */}
-          <div className="mb-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="contracts">Contracts</SelectItem>
-                <SelectItem value="reports">Reports</SelectItem>
-                <SelectItem value="invoices">Invoices</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Document Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="doc">Doc</SelectItem>
-                <SelectItem value="pdf">PDF</SelectItem>
-                <SelectItem value="image">Image</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedDate} onValueChange={setSelectedDate}>
-              <SelectTrigger>
-                <SelectValue placeholder="Document Date" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Dates</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-              <SelectTrigger>
-                <SelectValue placeholder="Staff" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Staff</SelectItem>
-                <SelectItem value="braun">Braun Henry</SelectItem>
-                <SelectItem value="salih">Salih Demirci</SelectItem>
-                <SelectItem value="john">John Benjamin</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
-              <SelectTrigger>
-                <SelectValue placeholder="Region" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Regions</SelectItem>
-                <SelectItem value="new-hampshire">New Hampshire</SelectItem>
-                <SelectItem value="california">California</SelectItem>
-                <SelectItem value="texas">Texas</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Upload Box or Preview */}
           {!file ? (
             <div
-              className={`mb-6 border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+              className={`mb-6 border-2 border-dashed rounded-lg p-16 text-center transition-colors ${
                 isDragging
                   ? 'border-primary bg-primary/5'
                   : 'border-muted-foreground/25 hover:border-muted-foreground/50'
@@ -555,23 +491,25 @@ export default function DocumentUploadPage() {
                 </CardContent>
               </Card>
 
-              <div className="mt-4 flex justify-center">
-                <Button
-                  onClick={handleUpload}
-                  disabled={loading}
-                  size="lg"
-                  className="w-full md:w-auto"
-                >
-                  {loading ? (
-                    <>Analyzing...</>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Analyze Document
-                    </>
-                  )}
-                </Button>
-              </div>
+              {!result && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    onClick={handleUpload}
+                    disabled={loading}
+                    size="lg"
+                    className="w-full md:w-auto"
+                  >
+                    {loading ? (
+                      <>Analyzing...</>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Analyze Document
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
@@ -593,21 +531,6 @@ export default function DocumentUploadPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    result.risk_assessment.risk_level === 'Low'
-                      ? 'bg-green-500/10'
-                      : result.risk_assessment.risk_level === 'Med'
-                      ? 'bg-yellow-500/10'
-                      : 'bg-red-500/10'
-                  }`}>
-                    <Shield className={`h-5 w-5 ${
-                      result.risk_assessment.risk_level === 'Low'
-                        ? 'text-green-600 dark:text-green-400'
-                        : result.risk_assessment.risk_level === 'Med'
-                        ? 'text-yellow-600 dark:text-yellow-400'
-                        : 'text-red-600 dark:text-red-400'
-                    }`} />
-                  </div>
                   <div className="text-left">
                     <h3 className="text-lg font-semibold">Overall Risk Assessment</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -633,7 +556,7 @@ export default function DocumentUploadPage() {
               <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3">
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Overall Score</p>
                       <div className="flex items-baseline gap-1">
@@ -641,13 +564,6 @@ export default function DocumentUploadPage() {
                         <span className="text-sm text-muted-foreground">/100</span>
                       </div>
                     </div>
-                    <div className={`h-2 w-2 rounded-full ${
-                      result.risk_assessment.risk_level === 'Low'
-                        ? 'bg-green-500'
-                        : result.risk_assessment.risk_level === 'Med'
-                        ? 'bg-yellow-500'
-                        : 'bg-red-500'
-                    }`} />
                   </div>
                   <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                     <div
@@ -664,7 +580,7 @@ export default function DocumentUploadPage() {
                 </div>
 
                 <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3">
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Format Risk</p>
                       <div className="flex items-baseline gap-1">
@@ -672,18 +588,23 @@ export default function DocumentUploadPage() {
                         <span className="text-sm text-muted-foreground">/100</span>
                       </div>
                     </div>
-                    <FileText className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 transition-all"
+                      className={`h-full transition-all ${
+                        result.risk_assessment.format_risk < 30
+                          ? 'bg-green-500'
+                          : result.risk_assessment.format_risk < 60
+                          ? 'bg-yellow-500'
+                          : 'bg-red-500'
+                      }`}
                       style={{ width: `${result.risk_assessment.format_risk}%` }}
                     />
                   </div>
                 </div>
 
                 <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
-                  <div className="flex items-start justify-between mb-3">
+                  <div className="mb-3">
                     <div>
                       <p className="text-xs font-medium text-muted-foreground mb-1">Authenticity Risk</p>
                       <div className="flex items-baseline gap-1">
@@ -691,11 +612,16 @@ export default function DocumentUploadPage() {
                         <span className="text-sm text-muted-foreground">/100</span>
                       </div>
                     </div>
-                    <Search className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-purple-500 transition-all"
+                      className={`h-full transition-all ${
+                        result.risk_assessment.authenticity_risk < 30
+                          ? 'bg-green-500'
+                          : result.risk_assessment.authenticity_risk < 60
+                          ? 'bg-yellow-500'
+                          : 'bg-red-500'
+                      }`}
                       style={{ width: `${result.risk_assessment.authenticity_risk}%` }}
                     />
                   </div>
@@ -715,7 +641,10 @@ export default function DocumentUploadPage() {
                   </div>
                   <div className="space-y-3">
                     {result.risk_assessment.justifications.slice(0, 5).map((just, idx) => (
-                      <div key={idx} className="flex items-start gap-3 py-2">
+                      <div
+                        key={idx}
+                        className="flex items-start gap-3 py-2 px-3 rounded-lg"
+                      >
                         <div className="flex-shrink-0 mt-1.5">
                           <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
                         </div>
@@ -737,180 +666,307 @@ export default function DocumentUploadPage() {
           </div>
 
           {/* Format Analysis */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <FileText className="h-6 w-6" />
-                Format Analysis
-              </CardTitle>
-              <CardDescription className="mt-2">
-                Document structure and formatting quality metrics
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Word Count</p>
-                  <p className="text-3xl font-bold">{result.format_analysis.word_count}</p>
-                </div>
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Spelling Errors</p>
-                  <p className="text-3xl font-bold">{(result.format_analysis.spell_error_rate * 100).toFixed(1)}%</p>
-                </div>
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Double Spaces</p>
-                  <p className="text-3xl font-bold">{result.format_analysis.double_space_count}</p>
-                </div>
-                <div className="p-4 rounded-lg border bg-muted/30">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-1">Coverage</p>
-                  <p className="text-3xl font-bold">{(result.format_analysis.section_coverage * 100).toFixed(0)}%</p>
-                </div>
-              </div>
-
-              {result.format_analysis.missing_sections.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold mb-3 uppercase tracking-wide text-muted-foreground">Missing Sections</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {result.format_analysis.missing_sections.map((section, idx) => (
-                      <Badge key={idx} className="bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30">
-                        <XCircle className="h-3 w-3 mr-1" />
-                        {section}
-                      </Badge>
-                    ))}
+          <div className="rounded-xl border bg-muted/40 overflow-hidden">
+            {/* Header Section */}
+            <button
+              onClick={() => setIsFormatAnalysisExpanded(!isFormatAnalysisExpanded)}
+              className="w-full px-6 py-5 border-b bg-muted/50 hover:bg-muted/60 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="text-left">
+                    <h3 className="text-lg font-semibold">Format Analysis</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Document structure and formatting quality metrics
+                    </p>
                   </div>
                 </div>
-              )}
+                <div className="flex items-center gap-3">
+                  {isFormatAnalysisExpanded ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </button>
 
-              {result.format_analysis.extracted_text && (
-                <div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowText(!showText)}
-                    className="mb-3"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    {showText ? 'Hide' : 'Show'} Extracted Text
-                  </Button>
-                  {showText && (
-                    <div className="max-h-64 overflow-y-auto border rounded-lg p-4 bg-muted/30">
-                      {highlightText(result.format_analysis.extracted_text, result.format_analysis)}
+            {/* Metrics Content */}
+            {isFormatAnalysisExpanded && (
+              <div className="p-6">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Word Count</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{result.format_analysis.word_count}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Spelling Errors</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{(result.format_analysis.spell_error_rate * 100).toFixed(1)}</span>
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Double Spaces</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{result.format_analysis.double_space_count}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Section Coverage</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-3xl font-bold tracking-tight">{(result.format_analysis.section_coverage * 100).toFixed(0)}</span>
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {result.format_analysis.missing_sections.length > 0 && (
+                  <div className="rounded-lg border bg-background p-5 mb-6">
+                    <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                      <div className="p-1.5 rounded-md bg-red-500/10">
+                        <XCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold">Missing Sections</h4>
+                        <p className="text-xs text-muted-foreground">{result.format_analysis.missing_sections.length} sections not found</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {result.format_analysis.missing_sections.map((section, idx) => (
+                        <Badge key={idx} className="bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30">
+                          {section}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {result.format_analysis.extracted_text && (
+                  <div className="rounded-lg border bg-background p-5">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowText(!showText)}
+                      className="mb-3"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      {showText ? 'Hide' : 'Show'} Extracted Text
+                    </Button>
+                    {showText && (
+                      <div className="max-h-64 overflow-y-auto border rounded-lg p-4 bg-muted/30 mt-3 whitespace-pre-wrap font-mono text-sm">
+                        {result.format_analysis.extracted_text}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Authenticity Check */}
+          {result.authenticity_check?.applicable && (
+            <div className="rounded-xl border bg-muted/40 overflow-hidden">
+              {/* Header Section */}
+              <button
+                onClick={() => setIsAuthenticityExpanded(!isAuthenticityExpanded)}
+                className="w-full px-6 py-5 border-b bg-muted/50 hover:bg-muted/60 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold">Authenticity & Tamper Detection</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Image metadata and manipulation analysis
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {isAuthenticityExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              {/* Content */}
+              {isAuthenticityExpanded && (
+                <div className="p-6 space-y-4">
+                  {/* EXIF Metadata */}
+                  {result.authenticity_check.exif && (
+                    <div className="rounded-lg border bg-background p-5">
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                        <div className={`p-1.5 rounded-md ${result.authenticity_check.exif.present ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                          <FileText className={`h-4 w-4 ${result.authenticity_check.exif.present ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">EXIF Metadata</h4>
+                          <p className="text-xs text-muted-foreground">Image metadata information</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Badge className={result.authenticity_check.exif.present ? "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30" : "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"}>
+                          {result.authenticity_check.exif.present ? "Present" : "Missing"}
+                        </Badge>
+                        {result.authenticity_check.exif.anomalies.length > 0 && (
+                          <div className="mt-3 p-3 rounded-md bg-red-500/10">
+                            <p className="text-sm font-medium text-red-700 dark:text-red-300">Anomalies Detected:</p>
+                            <p className="text-sm text-muted-foreground mt-1">{result.authenticity_check.exif.anomalies.join(', ')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Duplicate Detection */}
+                  {result.authenticity_check.phash && result.authenticity_check.phash.duplicates_found.length > 0 && (
+                    <div className="rounded-lg border bg-background p-5">
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                        <div className="p-1.5 rounded-md bg-red-500/10">
+                          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">Duplicate Detection</h4>
+                          <p className="text-xs text-muted-foreground">Perceptual hash analysis</p>
+                        </div>
+                      </div>
+                      <Badge variant="destructive">
+                        {result.authenticity_check.phash.duplicates_found.length} duplicates found
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Tampering Detection (ELA) */}
+                  {result.authenticity_check.ela && (
+                    <div className="rounded-lg border bg-background p-5">
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                        <div className={`p-1.5 rounded-md ${result.authenticity_check.ela.anomaly_detected ? 'bg-red-500/10' : 'bg-green-500/10'}`}>
+                          <Shield className={`h-4 w-4 ${result.authenticity_check.ela.anomaly_detected ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">Tampering Detection (ELA)</h4>
+                          <p className="text-xs text-muted-foreground">Error level analysis</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Badge className={result.authenticity_check.ela.anomaly_detected ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" : "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"}>
+                          {result.authenticity_check.ela.anomaly_detected ? "Tampering Detected" : "No Tampering"}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          Confidence: <span className="font-medium text-foreground">{(result.authenticity_check.ela.confidence * 100).toFixed(0)}%</span>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Generation Detection */}
+                  {result.authenticity_check.ai_generation && result.authenticity_check.ai_generation.likelihood > 0.3 && (
+                    <div className="rounded-lg border bg-background p-5">
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                        <div className={`p-1.5 rounded-md ${result.authenticity_check.ai_generation.likelihood > 0.6 ? 'bg-red-500/10' : 'bg-yellow-500/10'}`}>
+                          <Zap className={`h-4 w-4 ${result.authenticity_check.ai_generation.likelihood > 0.6 ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400'}`} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">AI Generation Detection</h4>
+                          <p className="text-xs text-muted-foreground">Machine learning analysis</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Badge className={result.authenticity_check.ai_generation.likelihood > 0.6 ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" : "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"}>
+                          {(result.authenticity_check.ai_generation.likelihood * 100).toFixed(0)}% likelihood
+                        </Badge>
+                        {result.authenticity_check.ai_generation.indicators.length > 0 && (
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <p className="text-sm font-medium mb-2">Indicators:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {result.authenticity_check.ai_generation.indicators.map((indicator, idx) => (
+                                <Badge key={idx} variant="outline" className="text-xs">
+                                  {indicator}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reverse Image Search */}
+                  {result.authenticity_check.reverse_search && result.authenticity_check.reverse_search.total_matches > 0 && (
+                    <div className="rounded-lg border bg-background p-5">
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b">
+                        <div className={`p-1.5 rounded-md ${
+                          result.authenticity_check.reverse_search.authenticity_risk === "High" ? 'bg-red-500/10' :
+                          result.authenticity_check.reverse_search.authenticity_risk === "Med" ? 'bg-yellow-500/10' : 'bg-green-500/10'
+                        }`}>
+                          <Search className={`h-4 w-4 ${
+                            result.authenticity_check.reverse_search.authenticity_risk === "High" ? 'text-red-600 dark:text-red-400' :
+                            result.authenticity_check.reverse_search.authenticity_risk === "Med" ? 'text-yellow-600 dark:text-yellow-400' : 'text-green-600 dark:text-green-400'
+                          }`} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold">Reverse Image Search</h4>
+                          <p className="text-xs text-muted-foreground">Internet image matching</p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <Badge className={
+                          result.authenticity_check.reverse_search.authenticity_risk === "High" ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" :
+                          result.authenticity_check.reverse_search.authenticity_risk === "Med" ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30" : "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
+                        }>
+                          {result.authenticity_check.reverse_search.total_matches} matches found
+                        </Badge>
+
+                        {result.authenticity_check.reverse_search.exact_matches.length > 0 && (
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <p className="text-sm font-semibold mb-2">Exact Matches:</p>
+                            <ul className="space-y-1">
+                              {result.authenticity_check.reverse_search.exact_matches.slice(0, 3).map((match, idx) => (
+                                <li key={idx} className="text-sm">
+                                  <a href={match.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                    {match.page_title || match.url}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {result.authenticity_check.reverse_search.partial_matches.length > 0 && (
+                          <div className="p-3 rounded-md bg-muted/50">
+                            <p className="text-sm font-semibold mb-2">Similar Images:</p>
+                            <ul className="space-y-1">
+                              {result.authenticity_check.reverse_search.partial_matches.slice(0, 3).map((match, idx) => (
+                                <li key={idx} className="text-sm">
+                                  <a href={match.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                                    {match.page_title || match.url}
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Authenticity Check */}
-          {result.authenticity_check?.applicable && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="h-5 w-5" />
-                  Authenticity & Tamper Detection
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* EXIF */}
-                {result.authenticity_check.exif && (
-                  <div>
-                    <h4 className="font-semibold mb-2">EXIF Metadata</h4>
-                    <Badge className={result.authenticity_check.exif.present ? "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30" : "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30"}>
-                      {result.authenticity_check.exif.present ? "Present" : "Missing"}
-                    </Badge>
-                    {result.authenticity_check.exif.anomalies.length > 0 && (
-                      <div className="mt-2 text-sm text-red-600">
-                        Anomalies: {result.authenticity_check.exif.anomalies.join(', ')}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Duplicates */}
-                {result.authenticity_check.phash && result.authenticity_check.phash.duplicates_found.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Duplicate Detection</h4>
-                    <Badge variant="destructive">
-                      {result.authenticity_check.phash.duplicates_found.length} duplicates found
-                    </Badge>
-                  </div>
-                )}
-
-                {/* ELA */}
-                {result.authenticity_check.ela && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Tampering Detection (ELA)</h4>
-                    <Badge className={result.authenticity_check.ela.anomaly_detected ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" : "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"}>
-                      {result.authenticity_check.ela.anomaly_detected ? "Tampering Detected" : "No Tampering"}
-                    </Badge>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Confidence: {(result.authenticity_check.ela.confidence * 100).toFixed(0)}%
-                    </p>
-                  </div>
-                )}
-
-                {/* AI Generation */}
-                {result.authenticity_check.ai_generation && result.authenticity_check.ai_generation.likelihood > 0.3 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">AI Generation Detection</h4>
-                    <Badge className={result.authenticity_check.ai_generation.likelihood > 0.6 ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" : "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30"}>
-                      <Zap className="h-3 w-3 mr-1" />
-                      {(result.authenticity_check.ai_generation.likelihood * 100).toFixed(0)}% likelihood
-                    </Badge>
-                    {result.authenticity_check.ai_generation.indicators.length > 0 && (
-                      <div className="mt-2 text-sm">
-                        Indicators: {result.authenticity_check.ai_generation.indicators.join(', ')}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Reverse Image Search */}
-                {result.authenticity_check.reverse_search && result.authenticity_check.reverse_search.total_matches > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Reverse Image Search</h4>
-                    <Badge className={
-                      result.authenticity_check.reverse_search.authenticity_risk === "High" ? "bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30" :
-                      result.authenticity_check.reverse_search.authenticity_risk === "Med" ? "bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 border-yellow-500/30" : "bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30"
-                    }>
-                      <Search className="h-3 w-3 mr-1" />
-                      {result.authenticity_check.reverse_search.total_matches} matches found
-                    </Badge>
-
-                    {result.authenticity_check.reverse_search.exact_matches.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium">Exact Matches:</p>
-                        <ul className="text-sm text-muted-foreground list-disc list-inside">
-                          {result.authenticity_check.reverse_search.exact_matches.slice(0, 3).map((match, idx) => (
-                            <li key={idx}>
-                              <a href={match.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                {match.page_title || match.url}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {result.authenticity_check.reverse_search.partial_matches.length > 0 && (
-                      <div className="mt-2">
-                        <p className="text-sm font-medium">Similar Images:</p>
-                        <ul className="text-sm text-muted-foreground list-disc list-inside">
-                          {result.authenticity_check.reverse_search.partial_matches.slice(0, 3).map((match, idx) => (
-                            <li key={idx}>
-                              <a href={match.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                                {match.page_title || match.url}
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            </div>
           )}
         </div>
       )}
@@ -918,14 +974,117 @@ export default function DocumentUploadPage() {
           {/* Document Audit Trail Table */}
           <div className="mt-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <FileCheck className="h-6 w-6" />
-                Document Audit Trail
-              </h2>
-              <p className="text-muted-foreground text-sm mt-2">
-                History of all document uploads and analysis results
-              </p>
+              <h2 className="text-2xl font-bold">Documents</h2>
+              <Separator className="mt-4" />
             </div>
+
+            {/* Search and Filter Bar */}
+            <div className="mb-4 w-full">
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Document Type Filter */}
+                <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Document Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="docx">DOCX</SelectItem>
+                    <SelectItem value="png">PNG</SelectItem>
+                    <SelectItem value="jpg">JPG</SelectItem>
+                    <SelectItem value="jpeg">JPEG</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Date Filter */}
+                <Select value={selectedDate} onValueChange={setSelectedDate}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Type Filter */}
+                <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="msa">MSA</SelectItem>
+                    <SelectItem value="sow">SOW</SelectItem>
+                    <SelectItem value="nda">NDA</SelectItem>
+                    <SelectItem value="amendment">Amendment</SelectItem>
+                    <SelectItem value="aml_investigation_report">AML Investigation Report</SelectItem>
+                    <SelectItem value="risk_assessment_report">Risk Assessment Report</SelectItem>
+                    <SelectItem value="operational_periodic_report">Operational Periodic Report</SelectItem>
+                    <SelectItem value="board_pack_summary">Board Pack Summary</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Risk Level Filter */}
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Risk Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Risk Levels</SelectItem>
+                    <SelectItem value="low">Low Risk</SelectItem>
+                    <SelectItem value="med">Medium Risk</SelectItem>
+                    <SelectItem value="high">High Risk</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Results Count */}
+                <div className="text-sm text-muted-foreground">
+                  Showing {auditTrail.filter(doc => {
+                    let matches = true
+                    if (selectedDocType !== 'all' && doc.document_type !== selectedDocType) matches = false
+                    if (selectedStaff !== 'all' && doc.doc_subtype !== selectedStaff) matches = false
+                    if (selectedCategory !== 'all' && doc.risk_level.toLowerCase() !== selectedCategory.toLowerCase()) matches = false
+                    if (selectedDate !== 'all') {
+                      const docDate = new Date(doc.upload_date)
+                      const now = new Date()
+                      if (selectedDate === 'today' && docDate.toDateString() !== now.toDateString()) matches = false
+                      if (selectedDate === 'week') {
+                        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+                        if (docDate < weekAgo) matches = false
+                      }
+                      if (selectedDate === 'month') {
+                        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+                        if (docDate < monthAgo) matches = false
+                      }
+                    }
+                    if (searchQuery) {
+                      const query = searchQuery.toLowerCase()
+                      const matchesSearch = doc.document_name.toLowerCase().includes(query) ||
+                                          doc.document_type.toLowerCase().includes(query) ||
+                                          doc.uploaded_by.toLowerCase().includes(query) ||
+                                          doc.risk_level.toLowerCase().includes(query)
+                      if (!matchesSearch) matches = false
+                    }
+                    return matches
+                  }).length} of {auditTrail.length} documents
+                </div>
+
+                {/* Search - Right aligned */}
+                <div className="relative ml-auto">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search documents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-[300px]"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
               {loadingAudit ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -935,26 +1094,61 @@ export default function DocumentUploadPage() {
                 <div className="text-center py-8 text-muted-foreground">
                   No documents analyzed yet. Upload a document to get started.
                 </div>
-              ) : (
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[50px]">
-                          <input type="checkbox" className="rounded" />
-                        </TableHead>
-                        <TableHead>Document Name</TableHead>
-                        <TableHead>Document Type</TableHead>
-                        <TableHead>Document Date</TableHead>
-                        <TableHead>Staff</TableHead>
-                        <TableHead>Region</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Risk Level</TableHead>
-                        <TableHead className="text-right">Operation</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {auditTrail.map((doc) => (
+              ) : (() => {
+                // Apply filters
+                const filteredAuditTrail = auditTrail.filter(doc => {
+                  let matches = true
+                  if (selectedDocType !== 'all' && doc.document_type !== selectedDocType) matches = false
+                  if (selectedStaff !== 'all' && doc.doc_subtype !== selectedStaff) matches = false
+                  if (selectedCategory !== 'all' && doc.risk_level.toLowerCase() !== selectedCategory.toLowerCase()) matches = false
+                  if (selectedDate !== 'all') {
+                    const docDate = new Date(doc.upload_date)
+                    const now = new Date()
+                    if (selectedDate === 'today' && docDate.toDateString() !== now.toDateString()) matches = false
+                    if (selectedDate === 'week') {
+                      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+                      if (docDate < weekAgo) matches = false
+                    }
+                    if (selectedDate === 'month') {
+                      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+                      if (docDate < monthAgo) matches = false
+                    }
+                  }
+                  if (searchQuery) {
+                    const query = searchQuery.toLowerCase()
+                    const matchesSearch = doc.document_name.toLowerCase().includes(query) ||
+                                        doc.document_type.toLowerCase().includes(query) ||
+                                        (doc.doc_subtype && doc.doc_subtype.toLowerCase().includes(query)) ||
+                                        doc.risk_level.toLowerCase().includes(query)
+                    if (!matchesSearch) matches = false
+                  }
+                  return matches
+                })
+
+                return filteredAuditTrail.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No documents match your filters. Try adjusting your search criteria.
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]">
+                            <input type="checkbox" className="rounded" />
+                          </TableHead>
+                          <TableHead>Document Name</TableHead>
+                          <TableHead>Document Type</TableHead>
+                          <TableHead>Document Date</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Region</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Risk Level</TableHead>
+                          <TableHead className="text-right">Operation</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredAuditTrail.map((doc) => (
                         <TableRow key={doc.id}>
                           <TableCell>
                             <input type="checkbox" className="rounded" />
@@ -968,7 +1162,7 @@ export default function DocumentUploadPage() {
                               year: 'numeric'
                             })}
                           </TableCell>
-                          <TableCell>{doc.uploaded_by}</TableCell>
+                          <TableCell className="capitalize">{doc.doc_subtype || '-'}</TableCell>
                           <TableCell>-</TableCell>
                           <TableCell>
                             <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30">
@@ -1009,7 +1203,8 @@ export default function DocumentUploadPage() {
                     </TableBody>
                   </Table>
                 </div>
-              )}
+                )
+              })()}
 
               {auditTrail.length > 0 && (
                 <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
@@ -1036,7 +1231,7 @@ export default function DocumentUploadPage() {
 
         {/* Audit Document Detail Dialog */}
         <Dialog open={showAuditDetail} onOpenChange={setShowAuditDetail}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="!max-w-[80vw] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileCheck className="h-5 w-5" />
@@ -1050,139 +1245,129 @@ export default function DocumentUploadPage() {
             {selectedAuditDoc && (
               <div className="space-y-6 mt-4">
                 {/* Risk Assessment Summary */}
-                <div className="rounded-lg border bg-muted/40 p-5">
-                  <div className="flex items-center justify-between mb-4 pb-3 border-b">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        selectedAuditDoc.risk_level === 'Low'
-                          ? 'bg-green-500/10'
-                          : selectedAuditDoc.risk_level === 'Med'
-                          ? 'bg-yellow-500/10'
-                          : 'bg-red-500/10'
-                      }`}>
-                        <Shield className={`h-5 w-5 ${
-                          selectedAuditDoc.risk_level === 'Low'
-                            ? 'text-green-600 dark:text-green-400'
-                            : selectedAuditDoc.risk_level === 'Med'
-                            ? 'text-yellow-600 dark:text-yellow-400'
-                            : 'text-red-600 dark:text-red-400'
-                        }`} />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold">Overall Risk Assessment</h3>
+                <div className="rounded-xl border bg-muted/40 overflow-hidden">
+                  <div className="px-6 py-5 border-b bg-muted/50">
+                    <div className="flex items-center justify-between">
+                      <div className="text-left">
+                        <h3 className="text-lg font-semibold">Overall Risk Assessment</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Analyzed on {new Date(selectedAuditDoc.upload_date).toLocaleDateString()}
+                          Last analyzed {new Date(selectedAuditDoc.upload_date).toLocaleDateString()}
                         </p>
                       </div>
+                      <Badge className={`${getRiskColor(selectedAuditDoc.risk_level)} px-4 py-1.5 text-sm font-medium`}>
+                        {selectedAuditDoc.risk_level} Risk
+                      </Badge>
                     </div>
-                    <Badge className={`${getRiskColor(selectedAuditDoc.risk_level)} px-4 py-1.5 text-sm font-medium`}>
-                      {selectedAuditDoc.risk_level} Risk
-                    </Badge>
                   </div>
 
                   {/* Metrics Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="rounded-lg border bg-background p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Overall Score</p>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-bold tracking-tight">{selectedAuditDoc.overall_risk_score?.toFixed(1)}</span>
-                            <span className="text-xs text-muted-foreground">/100</span>
-                          </div>
-                        </div>
-                        <div className={`h-2 w-2 rounded-full ${
-                          selectedAuditDoc.risk_level === 'Low'
-                            ? 'bg-green-500'
-                            : selectedAuditDoc.risk_level === 'Med'
-                            ? 'bg-yellow-500'
-                            : 'bg-red-500'
-                        }`} />
-                      </div>
-                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all ${
-                            selectedAuditDoc.risk_level === 'Low'
-                              ? 'bg-green-500'
-                              : selectedAuditDoc.risk_level === 'Med'
-                              ? 'bg-yellow-500'
-                              : 'bg-red-500'
-                          }`}
-                          style={{ width: `${selectedAuditDoc.overall_risk_score}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border bg-background p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Format Risk</p>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-bold tracking-tight">{selectedAuditDoc.format_risk?.toFixed(1)}</span>
-                            <span className="text-xs text-muted-foreground">/100</span>
-                          </div>
-                        </div>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 transition-all"
-                          style={{ width: `${selectedAuditDoc.format_risk}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border bg-background p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Authenticity Risk</p>
-                          <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-bold tracking-tight">{selectedAuditDoc.authenticity_risk?.toFixed(1)}</span>
-                            <span className="text-xs text-muted-foreground">/100</span>
-                          </div>
-                        </div>
-                        <Search className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-purple-500 transition-all"
-                          style={{ width: `${selectedAuditDoc.authenticity_risk}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Risk Factors */}
-                  {selectedAuditDoc.risk_justifications && selectedAuditDoc.risk_justifications.length > 0 && (
-                    <div className="mt-6 rounded-lg border bg-background p-4">
-                      <div className="flex items-center gap-2 mb-3 pb-2 border-b">
-                        <div className="p-1 rounded-md bg-orange-500/10">
-                          <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-semibold">Risk Factors Detected</h4>
-                          <p className="text-xs text-muted-foreground">{selectedAuditDoc.risk_justifications.length} issues identified</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {selectedAuditDoc.risk_justifications.slice(0, 5).map((just: any, idx: number) => (
-                          <div key={idx} className="flex items-start gap-3 py-2">
-                            <div className="flex-shrink-0 mt-1.5">
-                              <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                        <div className="mb-3">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Overall Score</p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-bold tracking-tight">{selectedAuditDoc.overall_risk_score?.toFixed(1)}</span>
+                              <span className="text-sm text-muted-foreground">/100</span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">{just.category}</span>
-                                <span className="text-xs text-muted-foreground">•</span>
-                                <span className="text-xs text-muted-foreground">Severity: {just.severity || 'Medium'}</span>
+                          </div>
+                        </div>
+                        <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              selectedAuditDoc.risk_level === 'Low'
+                                ? 'bg-green-500'
+                                : selectedAuditDoc.risk_level === 'Med'
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${selectedAuditDoc.overall_risk_score}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                        <div className="mb-3">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Format Risk</p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-bold tracking-tight">{selectedAuditDoc.format_risk?.toFixed(1)}</span>
+                              <span className="text-sm text-muted-foreground">/100</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              selectedAuditDoc.format_risk < 30
+                                ? 'bg-green-500'
+                                : selectedAuditDoc.format_risk < 60
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${selectedAuditDoc.format_risk}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="group relative overflow-hidden rounded-lg border bg-background p-5 transition-all hover:shadow-sm">
+                        <div className="mb-3">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Authenticity Risk</p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="text-3xl font-bold tracking-tight">{selectedAuditDoc.authenticity_risk?.toFixed(1)}</span>
+                              <span className="text-sm text-muted-foreground">/100</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all ${
+                              selectedAuditDoc.authenticity_risk < 30
+                                ? 'bg-green-500'
+                                : selectedAuditDoc.authenticity_risk < 60
+                                ? 'bg-yellow-500'
+                                : 'bg-red-500'
+                            }`}
+                            style={{ width: `${selectedAuditDoc.authenticity_risk}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Risk Factors */}
+                    {selectedAuditDoc.risk_justifications && selectedAuditDoc.risk_justifications.length > 0 && (
+                      <div className="rounded-lg border bg-background p-5">
+                        <div className="flex items-center gap-2 mb-4 pb-3 border-b">
+                          <div className="p-1.5 rounded-md bg-orange-500/10">
+                            <AlertCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold">Risk Factors Detected</h4>
+                            <p className="text-xs text-muted-foreground">{selectedAuditDoc.risk_justifications.length} issues identified</p>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          {selectedAuditDoc.risk_justifications.slice(0, 5).map((just: any, idx: number) => (
+                            <div key={idx} className="flex items-start gap-3 py-2 px-3 rounded-lg">
+                              <div className="flex-shrink-0 mt-1.5">
+                                <div className="h-1.5 w-1.5 rounded-full bg-orange-500" />
                               </div>
-                              <p className="text-sm text-foreground leading-relaxed">{just.reason}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">{just.category}</span>
+                                  <span className="text-xs text-muted-foreground">•</span>
+                                  <span className="text-xs text-muted-foreground">Severity: {just.severity || 'Medium'}</span>
+                                </div>
+                                <p className="text-sm text-foreground leading-relaxed">{just.reason}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {/* Document Info */}
