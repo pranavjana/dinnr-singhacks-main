@@ -1,0 +1,16 @@
+**Executive Summary**
+The case has been flagged with a decision of SUS, indicating a potential suspicious activity that requires further investigation. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case and escalate it to a Level 2 AML analyst for deeper analysis. The recommended action path involves creating a case, escalating it to Level 2, and requesting source-of-funds documentation from the customer. This approach will enable a comprehensive review of the case and ensure that all necessary steps are taken to mitigate potential risks.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for deeper analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information and conduct a thorough analysis of the case. However, if the customer fails to respond or provides incomplete evidence, the case may need to be escalated further or additional actions taken.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the SUS decision and lack of information highlight the need for a thorough investigation to determine the legitimacy of the transactions and potential risks associated with the customer's activities.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request, and follow up within 5 business days if no response is received. The reviewer should also verify that the case is properly updated in the CaseWorks record and that all relevant evidence is attached. Outstanding evidence required includes the customer's response to the source-of-funds documentation request and any additional information that may be necessary to complete the investigation.
