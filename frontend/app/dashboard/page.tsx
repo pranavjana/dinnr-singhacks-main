@@ -16,14 +16,22 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { ChevronDown, Trash2, Check } from "lucide-react"
+import { ChevronDown, ChevronUp, Trash2, Check, Search, Calendar, X } from "lucide-react"
 import { api } from "@/lib/api"
 import { toast } from "sonner"
 
@@ -75,6 +83,16 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [showAllFields, setShowAllFields] = useState<Set<number>>(new Set())
+
+  // Filter states
+  const [dateRange, setDateRange] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [typeFilter, setTypeFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
+
+  // Sorting states
+  const [sortColumn, setSortColumn] = useState<'amount' | 'risk_score' | 'status' | 'date' | null>(null)
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
 
   // Load existing transactions on mount
   useEffect(() => {
@@ -437,6 +455,110 @@ export default function Page() {
     }
   }
 
+  // Filter transactions based on current filters
+  const filteredTransactions = transactions.filter(transaction => {
+    // Date range filter
+    if (dateRange !== "all" && transaction.booking_datetime) {
+      const txnDate = new Date(transaction.booking_datetime)
+      const now = new Date()
+      const daysDiff = Math.floor((now.getTime() - txnDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (dateRange === "7days" && daysDiff > 7) return false
+      if (dateRange === "30days" && daysDiff > 30) return false
+      if (dateRange === "90days" && daysDiff > 90) return false
+    }
+
+    // Status filter (based on verdict)
+    if (statusFilter !== "all") {
+      const verdict = transaction.verdict?.verdict?.toLowerCase()
+      if (statusFilter === "analyzing" && !transaction.isAnalyzing) return false
+      if (statusFilter === "pass" && verdict !== "pass") return false
+      if (statusFilter === "suspicious" && verdict !== "suspicious") return false
+      if (statusFilter === "fail" && verdict !== "fail") return false
+    }
+
+    // Type filter
+    if (typeFilter !== "all") {
+      const category = transaction.category?.toLowerCase() || ""
+      const productType = transaction.product_type?.toLowerCase() || ""
+      if (!category.includes(typeFilter.toLowerCase()) && !productType.includes(typeFilter.toLowerCase())) {
+        return false
+      }
+    }
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const searchableFields = [
+        transaction.merchant,
+        transaction.originator_name,
+        transaction.beneficiary_name,
+        transaction.payment_id,
+        transaction.trace_id,
+      ].filter(Boolean).map(f => f?.toString().toLowerCase() || "")
+
+      if (!searchableFields.some(field => field.includes(query))) {
+        return false
+      }
+    }
+
+    return true
+  })
+
+  const clearFilters = () => {
+    setDateRange("all")
+    setStatusFilter("all")
+    setTypeFilter("all")
+    setSearchQuery("")
+  }
+
+  // Handle sorting
+  const handleSort = (column: 'amount' | 'risk_score' | 'status' | 'date') => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking same column
+      setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')
+    } else {
+      // Set new column and default to descending
+      setSortColumn(column)
+      setSortDirection('desc')
+    }
+  }
+
+  // Apply sorting to filtered transactions
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    if (!sortColumn) return 0
+
+    let aValue: any
+    let bValue: any
+
+    switch (sortColumn) {
+      case 'amount':
+        aValue = typeof a.amount === 'number' ? a.amount : parseFloat(a.amount || '0')
+        bValue = typeof b.amount === 'number' ? b.amount : parseFloat(b.amount || '0')
+        break
+      case 'risk_score':
+        aValue = a.verdict?.risk_score ?? -1
+        bValue = b.verdict?.risk_score ?? -1
+        break
+      case 'status':
+        // Sort by verdict: fail > suspicious > pass
+        const statusOrder: Record<string, number> = { fail: 3, suspicious: 2, pass: 1 }
+        aValue = statusOrder[a.verdict?.verdict?.toLowerCase() || ''] ?? 0
+        bValue = statusOrder[b.verdict?.verdict?.toLowerCase() || ''] ?? 0
+        break
+      case 'date':
+        aValue = a.booking_datetime ? new Date(a.booking_datetime).getTime() : 0
+        bValue = b.booking_datetime ? new Date(b.booking_datetime).getTime() : 0
+        break
+    }
+
+    if (sortDirection === 'desc') {
+      return bValue - aValue
+    } else {
+      return aValue - bValue
+    }
+  })
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -471,229 +593,551 @@ export default function Page() {
             </Button>
           </div>
 
-          {/* Recent Transactions - Full Width */}
-          <div className="flex flex-col flex-1 min-h-0">
-            <Card className="flex flex-col h-full min-h-0 border-0 shadow-none">
-              <CardHeader className="flex-shrink-0">
-                <CardTitle>Recent Transactions</CardTitle>
-                <CardDescription>Incoming transactions with risk analysis</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto min-h-0">
+          <Separator className="mb-4" />
+
+          {/* Content Container - consistent width for filters and list */}
+          <div className="flex flex-col flex-1 min-h-0 w-full">
+            {/* Filter Bar */}
+            <div className="mb-2 flex-shrink-0 w-full">
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* Date Range Selector */}
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-[180px]">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="7days">Last 7 days</SelectItem>
+                  <SelectItem value="30days">Last 30 days</SelectItem>
+                  <SelectItem value="90days">Last 90 days</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Status Filter */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <span className="flex items-center gap-2">
+                      All <Badge variant="secondary" className="ml-auto">{transactions.length}</Badge>
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="analyzing">Analyzing</SelectItem>
+                  <SelectItem value="pass">Pass</SelectItem>
+                  <SelectItem value="suspicious">Suspicious</SelectItem>
+                  <SelectItem value="fail">Fail</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Type Filter */}
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="wire_transfer">Wire Transfer</SelectItem>
+                  <SelectItem value="securities_trade">Securities Trade</SelectItem>
+                  <SelectItem value="cash_withdrawal">Cash Withdrawal</SelectItem>
+                  <SelectItem value="cash_deposit">Cash Deposit</SelectItem>
+                  <SelectItem value="fx_conversion">FX Conversion</SelectItem>
+                  <SelectItem value="fund_subscription">Fund Subscription</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Clear Filters Button */}
+              {(dateRange !== "all" || statusFilter !== "all" || typeFilter !== "all" || searchQuery !== "") && (
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-2">
+                  <X className="h-4 w-4" />
+                  Clear Filters
+                </Button>
+              )}
+
+              {/* Results Count */}
+              <div className="text-sm text-muted-foreground">
+                Showing {filteredTransactions.length} of {transactions.length} transactions
+              </div>
+
+              {/* Search - Right aligned */}
+              <div className="relative ml-auto">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search transactions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-[350px]"
+                />
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Transactions - Full Width */}
+            <div className="flex flex-col flex-1 min-h-0 w-full overflow-y-auto rounded-lg border mt-3">
                 {transactions.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
                     No transactions yet. Click "Load Transaction" to fetch sample transactions.
                   </p>
+                ) : filteredTransactions.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No transactions match your filters. Try adjusting your search criteria.
+                  </p>
                 ) : (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col">
                     {/* Column Headers */}
-                    <div className="sticky top-0 bg-background z-10 flex items-center gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground border-b">
-                      <div className="flex-1 min-w-0">Merchant / Originator</div>
-                      <div className="w-[200px] text-center">Status</div>
-                      <div className="w-[120px] text-right">Amount</div>
-                      <div className="w-4"></div>
+                    <div className="sticky top-0 z-10 flex items-center px-4 py-3 text-xs font-semibold text-muted-foreground border-b backdrop-blur-[11.9px] bg-muted/90">
+                      <div className="flex-[1.2]">PAYMENT METHOD</div>
+                      <div
+                        className="flex-[1.2] flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('amount')}
+                      >
+                        AMOUNT
+                        {sortColumn === 'amount' && (
+                          sortDirection === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div
+                        className="flex-1 flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('status')}
+                      >
+                        STATUS
+                        {sortColumn === 'status' && (
+                          sortDirection === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div
+                        className="flex-1 flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('risk_score')}
+                      >
+                        <span className="-ml-[0.875rem]">RISK SCORE</span>
+                        {sortColumn === 'risk_score' && (
+                          sortDirection === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div className="flex-[1.5]">PEOPLE</div>
+                      <div className="flex-[1.5]">ACTIONS TAKEN</div>
+                      <div
+                        className="flex-[1.3] flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                        onClick={() => handleSort('date')}
+                      >
+                        DATE
+                        {sortColumn === 'date' && (
+                          sortDirection === 'desc' ? <ChevronDown className="h-3 w-3" /> : <ChevronUp className="h-3 w-3" />
+                        )}
+                      </div>
+                      <div className="w-8"></div>
                     </div>
 
-                    {transactions.map((transaction, index) => {
+                    {sortedTransactions.map((transaction, index) => {
                       const isExpanded = expandedCards.has(index)
                       const showAll = showAllFields.has(index)
 
                       return (
-                        <div key={index} className="group">
+                        <div key={index} className="group border-b last:border-b-0">
                           {/* Compact Transaction Row */}
                           <div
-                            className="flex items-center gap-4 p-3 rounded-lg bg-secondary/50 dark:bg-secondary/20 cursor-pointer transition-all hover:bg-secondary/60 dark:hover:bg-secondary/30"
+                            className="flex items-center px-4 py-3 cursor-pointer transition-all hover:bg-muted/30"
                             onClick={() => toggleCard(index)}
                           >
-                            {/* Left: Name and Type */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-sm truncate">
-                                  {transaction.originator_name || transaction.merchant || 'Unknown Merchant'}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {transaction.product_type || transaction.category || 'N/A'}
-                                </span>
+                            {/* PAYMENT METHOD */}
+                            <div className="flex-[1.2]">
+                              <span className="text-sm">
+                                {transaction.product_type?.replace(/_/g, ' ') || 'N/A'}
+                              </span>
+                            </div>
+
+                            {/* AMOUNT */}
+                            <div className="flex-[1.2]">
+                              <div className="font-semibold text-sm">
+                                {typeof transaction.amount === 'number' ? transaction.amount.toLocaleString() : parseFloat(transaction.amount || '0').toLocaleString()} {transaction.currency || 'SGD'}
                               </div>
                             </div>
 
-                            {/* Center: Status Badges */}
-                            <div className="w-[200px] flex items-center justify-center gap-1.5">
+                            {/* STATUS */}
+                            <div className="flex-1">
                               {transaction.isAnalyzing && (
-                                <span className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-md animate-pulse">
+                                <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 dark:text-blue-300">
                                   Analyzing
-                                </span>
+                                </Badge>
                               )}
                               {transaction.isTriaging && (
-                                <span className="text-xs bg-purple-500/20 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-md animate-pulse">
+                                <Badge variant="secondary" className="bg-purple-500/20 text-purple-700 dark:text-purple-300">
                                   Triaging
-                                </span>
+                                </Badge>
                               )}
-                              {transaction.verdict?.verdict && !transaction.isAnalyzing && (
-                                <span className={`text-xs px-2 py-0.5 rounded-md ${
-                                  transaction.verdict.verdict === 'fail' ? 'bg-red-500/20 text-red-700 dark:text-red-300' :
-                                  transaction.verdict.verdict === 'suspicious' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-300' :
-                                  transaction.verdict.verdict === 'pass' ? 'bg-green-500/20 text-green-700 dark:text-green-300' :
-                                  'bg-gray-500/20 text-gray-700 dark:text-gray-300'
-                                }`}>
-                                  {transaction.verdict.verdict.toUpperCase()}
-                                </span>
+                              {transaction.verdict?.verdict && !transaction.isAnalyzing && !transaction.isTriaging && (
+                                <Badge className={
+                                  transaction.verdict.verdict === 'fail' ? 'bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-500/30' :
+                                  transaction.verdict.verdict === 'suspicious' ? 'bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/30' :
+                                  transaction.verdict.verdict === 'pass' ? 'bg-green-500/20 text-green-700 dark:text-green-300 hover:bg-green-500/30' :
+                                  'bg-gray-500/20 text-gray-700 dark:text-gray-300 hover:bg-gray-500/30'
+                                }>
+                                  {transaction.verdict.verdict}
+                                </Badge>
                               )}
                             </div>
 
-                            {/* Right: Amount */}
-                            <div className="w-[120px] text-right">
-                              <div className="font-bold text-sm">
-                                {transaction.currency || 'SGD'} {typeof transaction.amount === 'number' ? transaction.amount.toFixed(2) : parseFloat(transaction.amount || '0').toFixed(2)}
-                              </div>
+                            {/* ACTIVITY - Risk Score Circle */}
+                            <div className="flex-1 flex items-center pl-2">
+                              {transaction.verdict?.risk_score !== undefined ? (
+                                <div className="relative flex items-center justify-center shrink-0">
+                                  {/* Background circle */}
+                                  <svg className="w-9 h-9 -rotate-90">
+                                    <circle
+                                      cx="18"
+                                      cy="18"
+                                      r="14"
+                                      fill="none"
+                                      stroke="hsl(var(--muted))"
+                                      strokeWidth="2.5"
+                                      opacity="0.3"
+                                    />
+                                    {/* Progress circle */}
+                                    <circle
+                                      cx="18"
+                                      cy="18"
+                                      r="14"
+                                      fill="none"
+                                      stroke={
+                                        transaction.verdict.risk_score >= 70 ? '#dc2626' :
+                                        transaction.verdict.risk_score >= 40 ? '#fb923c' :
+                                        '#22c55e'
+                                      }
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                      style={{
+                                        strokeDasharray: `${2 * Math.PI * 14}`,
+                                        strokeDashoffset: `${2 * Math.PI * 14 * (1 - transaction.verdict.risk_score / 100)}`,
+                                      }}
+                                    />
+                                  </svg>
+                                  {/* Score text */}
+                                  <span className="absolute text-xs font-semibold">
+                                    {Math.round(transaction.verdict.risk_score)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">N/A</span>
+                              )}
+                            </div>
+
+                            {/* PEOPLE */}
+                            <div className="flex-[1.5]">
+                              <span className="text-sm truncate block">
+                                {transaction.originator_name || transaction.merchant || 'Unknown'}
+                              </span>
+                            </div>
+
+                            {/* ACTIONS TAKEN */}
+                            <div className="flex-[1.5]">
+                              {transaction.user_action ? (
+                                <Badge variant="outline" className="bg-green-50 dark:bg-green-950 border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 text-xs">
+                                  {transaction.user_action.replace('action_', '').replace(/_/g, ' ')}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground italic">No action taken</span>
+                              )}
+                            </div>
+
+                            {/* DATE */}
+                            <div className="flex-[1.3]">
+                              <span className="text-sm text-muted-foreground">
+                                {transaction.booking_datetime
+                                  ? new Date(transaction.booking_datetime).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric',
+                                      hour: 'numeric',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })
+                                  : 'N/A'}
+                              </span>
                             </div>
 
                             {/* Expand Indicator */}
-                            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            <div className="w-8 flex justify-end shrink-0">
+                              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </div>
                           </div>
 
                           {/* Expanded Details */}
                           {isExpanded && (
-                            <div className="mt-2 ml-4 p-4 border-l-2 border-gray-200 dark:border-gray-800 space-y-4" onClick={(e) => e.stopPropagation()}>
-                              {/* Risk Analysis Section */}
-                              {transaction.verdict && (
-                                <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                                  <h4 className="text-sm font-semibold">Risk Analysis</h4>
-                                  <div className="grid grid-cols-2 gap-3 text-sm">
-                                    <div>
-                                      <span className="text-muted-foreground">Verdict:</span>
-                                      <p className="font-medium uppercase">{transaction.verdict.verdict}</p>
+                            <div className="bg-gradient-to-b from-muted/30 to-muted/10 border-t" onClick={(e) => e.stopPropagation()}>
+                              <div className="p-6 space-y-6 max-w-7xl mx-auto">
+                                {/* Header Section with Key Info */}
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="bg-background rounded-lg p-4 border shadow-sm">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Transaction Type</div>
+                                    <div className="text-base font-semibold">
+                                      {transaction.product_type?.replace(/_/g, ' ') || transaction.category || 'N/A'}
                                     </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Assigned Team:</span>
-                                      <p className="font-medium">{transaction.verdict.assigned_team}</p>
-                                    </div>
-                                    <div>
-                                      <span className="text-muted-foreground">Risk Score:</span>
-                                      <p className="font-medium">{transaction.verdict.risk_score?.toFixed(2) || 'N/A'}</p>
-                                    </div>
-                                    {transaction.verdict.rule_score !== undefined && (
-                                      <div>
-                                        <span className="text-muted-foreground">Rule Score:</span>
-                                        <p className="font-medium">{transaction.verdict.rule_score.toFixed(2)}</p>
-                                      </div>
-                                    )}
                                   </div>
-                                  {transaction.verdict.justification && (
-                                    <div>
-                                      <span className="text-muted-foreground">Justification:</span>
-                                      <p className="text-sm mt-1 font-medium">{transaction.verdict.justification}</p>
+                                  <div className="bg-background rounded-lg p-4 border shadow-sm">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Beneficiary</div>
+                                    <div className="text-base font-semibold truncate">
+                                      {transaction.beneficiary_name || 'N/A'}
                                     </div>
-                                  )}
-                                  {transaction.verdict.triggered_rules && transaction.verdict.triggered_rules.length > 0 && (
-                                    <div>
-                                      <span className="text-muted-foreground">Detected Patterns ({transaction.verdict.triggered_rules.length}):</span>
-                                      <ul className="list-disc list-inside text-sm mt-1 space-y-1">
-                                        {transaction.verdict.triggered_rules.map((rule: any, i) => (
-                                          <li key={i} className="font-medium">
-                                            <span className="font-semibold text-red-600">{rule.pattern_type || rule.rule_name || rule.name || `Pattern ${i + 1}`}</span>
-                                            {rule.description && <span className="text-muted-foreground">: {rule.description}</span>}
-                                            {rule.severity && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-orange-100 text-orange-800">{rule.severity}</span>}
-                                          </li>
-                                        ))}
-                                      </ul>
+                                  </div>
+                                  <div className="bg-background rounded-lg p-4 border shadow-sm">
+                                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Payment ID</div>
+                                    <div className="text-base font-mono text-sm truncate">
+                                      {transaction.payment_id || 'N/A'}
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
-                              )}
 
-                              {/* AML Triage Section */}
-                              {transaction.triage && (
-                                <div className="p-3 rounded-lg bg-blue-50/50 dark:bg-blue-950/30 space-y-3 border border-blue-200 dark:border-blue-800">
-                                  <div className="flex items-center justify-between">
-                                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Recommended Actions</h4>
-                                    <span className="text-xs bg-blue-500/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-md">
-                                      {transaction.triage.screening_result.decision}
-                                    </span>
+                                {/* Risk Analysis Section */}
+                                {transaction.verdict && (
+                                  <div className="bg-background rounded-lg border shadow-sm overflow-hidden">
+                                    <div className="px-5 py-4 border-b bg-muted/50">
+                                      <h4 className="text-sm font-semibold uppercase tracking-wide">Risk Analysis</h4>
+                                    </div>
+                                    <div className="p-5 space-y-5">
+                                      {/* Risk Score Visualization */}
+                                      <div className="flex items-center gap-6">
+                                        <div className="relative flex items-center justify-center shrink-0">
+                                          <svg className="w-24 h-24 -rotate-90">
+                                            <circle
+                                              cx="48"
+                                              cy="48"
+                                              r="40"
+                                              fill="none"
+                                              stroke="hsl(var(--muted))"
+                                              strokeWidth="6"
+                                              opacity="0.2"
+                                            />
+                                            <circle
+                                              cx="48"
+                                              cy="48"
+                                              r="40"
+                                              fill="none"
+                                              stroke={
+                                                transaction.verdict.risk_score >= 70 ? '#dc2626' :
+                                                transaction.verdict.risk_score >= 40 ? '#fb923c' :
+                                                '#22c55e'
+                                              }
+                                              strokeWidth="6"
+                                              strokeLinecap="round"
+                                              style={{
+                                                strokeDasharray: `${2 * Math.PI * 40}`,
+                                                strokeDashoffset: `${2 * Math.PI * 40 * (1 - transaction.verdict.risk_score / 100)}`,
+                                              }}
+                                            />
+                                          </svg>
+                                          <div className="absolute text-center">
+                                            <div className="text-2xl font-bold">
+                                              {Math.round(transaction.verdict.risk_score)}
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex-1 grid grid-cols-3 gap-4">
+                                          <div className="space-y-1">
+                                            <div className="text-xs text-muted-foreground uppercase tracking-wider">Verdict</div>
+                                            <Badge className={
+                                              transaction.verdict.verdict === 'fail' ? 'bg-red-500 hover:bg-red-600 text-white' :
+                                              transaction.verdict.verdict === 'suspicious' ? 'bg-orange-500 hover:bg-orange-600 text-white' :
+                                              'bg-green-500 hover:bg-green-600 text-white'
+                                            }>
+                                              {transaction.verdict.verdict.toUpperCase()}
+                                            </Badge>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <div className="text-xs text-muted-foreground uppercase tracking-wider">Assigned Team</div>
+                                            <div className="px-3 py-2 bg-muted/50 border rounded-md">
+                                              <div className="text-sm font-semibold">{transaction.verdict.assigned_team}</div>
+                                            </div>
+                                          </div>
+                                          {transaction.verdict.rule_score !== undefined && (
+                                            <div className="space-y-1">
+                                              <div className="text-xs text-muted-foreground uppercase tracking-wider">Rule Score</div>
+                                              <div className="text-sm font-medium">{transaction.verdict.rule_score.toFixed(2)}</div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {/* Justification */}
+                                      {transaction.verdict.justification && (
+                                        <div className="p-4 bg-muted/30 rounded-lg border">
+                                          <div className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Justification</div>
+                                          <p className="text-sm leading-relaxed">{transaction.verdict.justification}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Detected Patterns */}
+                                      {transaction.verdict.triggered_rules && transaction.verdict.triggered_rules.length > 0 && (
+                                        <div>
+                                          <div className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3">
+                                            Detected Patterns ({transaction.verdict.triggered_rules.length})
+                                          </div>
+                                          <div className="space-y-3">
+                                            {transaction.verdict.triggered_rules.map((rule: any, i) => (
+                                              <div key={i} className="p-4 bg-background border rounded-lg hover:border-foreground/20 transition-colors">
+                                                <div className="flex items-start justify-between gap-4">
+                                                  <div className="flex-1 space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                      <div className="w-1.5 h-1.5 rounded-full bg-foreground/40"></div>
+                                                      <div className="font-semibold text-sm text-foreground">
+                                                        {rule.pattern_type || rule.rule_name || rule.name || `Pattern ${i + 1}`}
+                                                      </div>
+                                                    </div>
+                                                    {rule.description && (
+                                                      <div className="text-sm text-muted-foreground leading-relaxed pl-3.5">
+                                                        {rule.description}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                  {rule.severity && (
+                                                    <Badge className={`text-xs font-medium shrink-0 ${
+                                                      rule.severity.toLowerCase() === 'critical' || rule.severity.toLowerCase() === 'high'
+                                                        ? 'bg-red-500/20 text-red-700 dark:text-red-300 hover:bg-red-500/30'
+                                                        : rule.severity.toLowerCase() === 'medium'
+                                                        ? 'bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/30'
+                                                        : 'bg-green-500/20 text-green-700 dark:text-green-300 hover:bg-green-500/30'
+                                                    }`}>
+                                                      {rule.severity}
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {transaction.triage.screening_result.action_ids && transaction.triage.screening_result.action_ids.length > 0 ? (
-                                      transaction.triage.screening_result.action_ids.map((action: string, i: number) => {
-                                        const isSelected = transaction.user_action === action
-                                        return (
+                                )}
+
+                                {/* AML Triage Section */}
+                                {transaction.triage && (
+                                  <div className={`rounded-lg border shadow-sm overflow-hidden transition-colors ${
+                                    transaction.user_action
+                                      ? 'bg-green-100/60 dark:bg-green-950/30 border-green-300 dark:border-green-800'
+                                      : 'bg-background'
+                                  }`}>
+                                    <div className={`px-5 py-4 border-b ${
+                                      transaction.user_action
+                                        ? 'border-green-300 dark:border-green-800'
+                                        : ''
+                                    }`}>
+                                      <div className="flex items-center justify-between">
+                                        <h4 className={`text-sm font-semibold uppercase tracking-wide ${
+                                          transaction.user_action
+                                            ? 'text-green-800 dark:text-green-100'
+                                            : ''
+                                        }`}>
+                                          Recommended Actions
+                                        </h4>
+                                        <div className="flex items-center gap-2">
+                                          {transaction.user_action && (
+                                            <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 hover:bg-green-500/30 border-transparent">
+                                              Action Taken
+                                            </Badge>
+                                          )}
+                                          <Badge variant="outline" className="bg-muted/50 border-muted-foreground/20 text-foreground text-xs font-medium">
+                                            {transaction.triage.screening_result.decision}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="p-5">
+                                      <div className="flex flex-wrap gap-2.5">
+                                        {transaction.triage.screening_result.action_ids && transaction.triage.screening_result.action_ids.length > 0 ? (
+                                          transaction.triage.screening_result.action_ids.map((action: string, i: number) => {
+                                            const isSelected = transaction.user_action === action
+                                            return (
+                                              <Button
+                                                key={i}
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => transaction.id && handleActionClick(transaction.id, index, action)}
+                                                disabled={!transaction.id}
+                                                className={`text-xs font-medium transition-all duration-200 gap-1.5 ${
+                                                  isSelected
+                                                    ? 'bg-green-500/20 text-green-700 dark:text-green-300 border-transparent hover:bg-green-500/30'
+                                                    : 'bg-background hover:bg-muted/50 border-muted-foreground/30 hover:border-foreground/50'
+                                                }`}
+                                              >
+                                                {isSelected && (
+                                                  <Check className="h-3 w-3" />
+                                                )}
+                                                {action.replace('action_', '').replace(/_/g, ' ')}
+                                              </Button>
+                                            )
+                                          })
+                                        ) : (
+                                          <span className="text-sm text-muted-foreground italic">No actions required</span>
+                                        )}
+                                      </div>
+
+                                      {transaction.user_action && (
+                                        <div className="mt-4 pt-4 border-t border-green-300 dark:border-green-800">
                                           <Button
-                                            key={i}
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => transaction.id && handleActionClick(transaction.id, index, action)}
-                                            disabled={!transaction.id}
-                                            className={`text-xs transition-all duration-300 gap-1.5 ${
-                                              isSelected
-                                                ? 'bg-green-100/80 dark:bg-green-900/40 border-green-400 dark:border-green-600 text-green-800 dark:text-green-200 hover:bg-green-100/80 dark:hover:bg-green-900/40'
-                                                : 'bg-white dark:bg-gray-900 border-blue-300 dark:border-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950'
-                                            }`}
+                                            onClick={() => transaction.id && handleActionClick(transaction.id, index, '')}
+                                            className="text-xs font-medium bg-red-500/20 text-red-700 dark:text-red-300 border-transparent hover:bg-red-500/30"
                                           >
-                                            {isSelected && (
-                                              <Check className="h-3 w-3 animate-in zoom-in-50 duration-300" />
-                                            )}
-                                            {action.replace('action_', '').replace(/_/g, ' ')}
+                                            <X className="h-3 w-3 mr-1" />
+                                            Remove Action
                                           </Button>
-                                        )
-                                      })
-                                    ) : (
-                                      <span className="text-xs text-muted-foreground">No actions required</span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="grid grid-cols-2 gap-3 text-sm pb-4 border-b">
-                                <div>
-                                  <span className="text-muted-foreground">Type:</span>
-                                  <p className="font-medium">{transaction.product_type || transaction.category || 'N/A'}</p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Beneficiary:</span>
-                                  <p className="font-medium">{transaction.beneficiary_name || 'N/A'}</p>
-                                </div>
-                              </div>
-
-                              <Collapsible open={showAll} onOpenChange={() => toggleAllFields(index)}>
-                                <div className="flex items-center justify-between">
-                                  <h4 className="text-sm font-semibold">All Transaction Details</h4>
-                                  <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="w-9 p-0">
-                                      <ChevronDown className={`h-4 w-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
-                                      <span className="sr-only">Toggle all fields</span>
-                                    </Button>
-                                  </CollapsibleTrigger>
-                                </div>
-
-                                <CollapsibleContent className="mt-4">
-                                  <div className="grid grid-cols-2 gap-3 text-sm">
-                                    {Object.entries(transaction).map(([key, value]) => {
-                                      if (['merchant', 'amount', 'currency', 'category', 'timestamp', 'originator_name', 'product_type', 'booking_datetime', 'beneficiary_name', 'status', 'verdict', 'triage', 'isAnalyzing', 'isTriaging'].includes(key)) {
-                                        return null
-                                      }
-                                      return (
-                                        <div key={key} className="space-y-1">
-                                          <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}:</span>
-                                          <p className="font-medium break-all">{String(value) || 'N/A'}</p>
                                         </div>
-                                      )
-                                    })}
+                                      )}
+                                    </div>
                                   </div>
-                                </CollapsibleContent>
-                              </Collapsible>
+                                )}
 
-                              {/* Delete Button */}
-                              {transaction.id && (
-                                <div className="pt-4 border-t flex justify-end">
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDeleteTransaction(transaction.id!, index)}
-                                    className="gap-2"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                    Delete Transaction
-                                  </Button>
-                                </div>
-                              )}
+                                {/* All Transaction Details - Collapsible */}
+                                <Collapsible open={showAll} onOpenChange={() => toggleAllFields(index)}>
+                                  <div className="bg-background rounded-lg border shadow-sm overflow-hidden">
+                                    <CollapsibleTrigger asChild>
+                                      <button className="w-full px-5 py-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                                        <h4 className="text-sm font-semibold uppercase tracking-wide">All Transaction Details</h4>
+                                        <ChevronDown className={`h-4 w-4 transition-transform ${showAll ? 'rotate-180' : ''}`} />
+                                      </button>
+                                    </CollapsibleTrigger>
+
+                                    <CollapsibleContent>
+                                      <div className="px-5 pb-5 pt-2 border-t">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          {Object.entries(transaction).map(([key, value]) => {
+                                            if (['merchant', 'amount', 'currency', 'category', 'timestamp', 'originator_name', 'product_type', 'booking_datetime', 'beneficiary_name', 'status', 'verdict', 'triage', 'isAnalyzing', 'isTriaging', 'user_action', 'user_action_timestamp', 'user_action_by', 'id', 'payment_id'].includes(key)) {
+                                              return null
+                                            }
+                                            return (
+                                              <div key={key} className="space-y-1 p-3 rounded-lg bg-muted/30">
+                                                <div className="text-xs text-muted-foreground uppercase tracking-wider capitalize">
+                                                  {key.replace(/_/g, ' ')}
+                                                </div>
+                                                <div className="text-sm font-medium break-all">{String(value) || 'N/A'}</div>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      </div>
+                                    </CollapsibleContent>
+                                  </div>
+                                </Collapsible>
+
+                                {/* Delete Button */}
+                                {transaction.id && (
+                                  <div className="flex justify-end">
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      onClick={() => handleDeleteTransaction(transaction.id!, index)}
+                                      className="gap-2 shadow-sm"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete Transaction
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -701,8 +1145,7 @@ export default function Page() {
                     })}
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </div>
           </div>
         </div>
       </SidebarInset>
