@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID f1735ab9-ba2f-4fa9-bd81-cbef5784a34d has been flagged for further review due to an unspecified risk level and a screening decision of SUS, indicating potential suspicious activity. The recommended action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer. These actions will help gather more information and context to determine the legitimacy of the transactions and potential money laundering risks.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Deprioritisation**
+No alternative actions were considered, as the recommended actions are essential for gathering more information and context to determine the legitimacy of the transactions.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context were provided, the screening decision of SUS and unspecified risk level justify the recommended actions to gather more information and context.
+
+**Next Steps**
+The reviewer should monitor the case for the customer's response to the source-of-funds documentation request and follow up within 5 business days. The reviewer should also verify that the case is properly updated in the CaseWorks record and that the escalation request is submitted to the Level 2 AML analyst. Outstanding evidence includes the customer's response to the source-of-funds documentation request and any additional information gathered during the investigation. The reviewer should schedule a follow-up review to assess the case's progress and determine the next course of action.
