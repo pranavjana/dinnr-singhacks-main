@@ -95,7 +95,7 @@ async def rules_tool_node(state: ExtractionState) -> dict[str, Any]:
                 source_document_id=state["document_id"],
                 extraction_confidence=confidence,
                 extraction_model="moonshotai/kimi-k2-instruct-0905",
-                validation_status="pending" if confidence < 0.8 else "validated",
+                validation_status="pending" if confidence <= 0.95 else "validated",
             )
 
             # Step 3: Check for duplicates

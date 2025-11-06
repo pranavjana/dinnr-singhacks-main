@@ -9,6 +9,7 @@ from typing import Literal
 import structlog
 from workflows.rule_extraction import extract_rules_from_document, extract_rules_batch
 from services.supabase_service import get_supabase_service
+from services.confidence_analyzer import analyze_low_confidence
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/extraction", tags=["Rule Extraction"])
@@ -406,6 +407,63 @@ async def get_audit_trail(limit: int = 100):
     except Exception as e:
         logger.error("Failed to retrieve audit trail", error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to retrieve audit trail: {str(e)}")
+
+
+@router.get("/rules/{rule_id}/confidence-analysis")
+async def get_confidence_analysis(rule_id: str):
+    """
+    Get confidence analysis for a low-confidence rule.
+
+    Returns explanation and clarification questions for rules with extraction_confidence < 0.95.
+    """
+    db = get_supabase_service()
+
+    try:
+        import asyncio
+
+        # Fetch the rule
+        response = await asyncio.to_thread(
+            lambda: db.client.table("compliance_rules")
+            .select("*")
+            .eq("id", rule_id)
+            .single()
+            .execute()
+        )
+
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Rule not found")
+
+        rule = response.data
+        confidence = rule.get("extraction_confidence", 1.0)
+
+        # Determine confidence tier
+        if confidence > 0.95:
+            return {
+                "has_low_confidence": False,
+                "tier": "high",
+                "confidence": confidence,
+                "reason": "Confidence level is high.",
+                "questions": []
+            }
+
+        # Determine if moderate (80-95%) or low (< 80%)
+        tier = "moderate" if confidence >= 0.80 else "low"
+
+        analysis = await analyze_low_confidence(rule, tier)
+
+        return {
+            "has_low_confidence": True,
+            "tier": tier,
+            "confidence": confidence,
+            "reason": analysis["reason"],
+            "questions": analysis["questions"]
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to analyze confidence", rule_id=rule_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
 @router.get("/health")
