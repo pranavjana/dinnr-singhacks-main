@@ -846,6 +846,8 @@ export default function RulesPage() {
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([])
   const [expandedPendingRules, setExpandedPendingRules] = useState<Set<string>>(new Set())
   const [approvingRules, setApprovingRules] = useState<Set<string>>(new Set())
+  const [confidenceAnalysis, setConfidenceAnalysis] = useState<Record<string, { reason: string; questions: string[]; tier: string }>>({})
+  const [loadingConfidenceAnalysis, setLoadingConfidenceAnalysis] = useState<Set<string>>(new Set())
 
   // Filter states for current rules
   const [filterRuleType, setFilterRuleType] = useState<string>('all')
@@ -962,16 +964,58 @@ export default function RulesPage() {
     })
   }
 
-  const togglePendingRule = (ruleId: string) => {
+  const togglePendingRule = async (ruleId: string) => {
     setExpandedPendingRules(prev => {
       const newSet = new Set(prev)
       if (newSet.has(ruleId)) {
         newSet.delete(ruleId)
       } else {
         newSet.add(ruleId)
+        // Load confidence analysis if not already loaded
+        if (!confidenceAnalysis[ruleId]) {
+          loadConfidenceAnalysis(ruleId)
+        }
       }
       return newSet
     })
+  }
+
+  const loadConfidenceAnalysis = async (ruleId: string) => {
+    setLoadingConfidenceAnalysis(prev => new Set(prev).add(ruleId))
+    try {
+      const analysis = await api.getConfidenceAnalysis(ruleId)
+      if (analysis.has_low_confidence) {
+        setConfidenceAnalysis(prev => ({
+          ...prev,
+          [ruleId]: {
+            reason: analysis.reason || 'Confidence level requires additional review.',
+            questions: analysis.questions || [],
+            tier: analysis.tier || 'moderate'
+          }
+        }))
+      } else {
+        // Even if not low confidence, store empty analysis to prevent re-fetching
+        setConfidenceAnalysis(prev => ({
+          ...prev,
+          [ruleId]: {
+            reason: '',
+            questions: [],
+            tier: 'high'
+          }
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to load confidence analysis:', error)
+      toast.error('Failed to load confidence analysis', {
+        description: 'Please try expanding the rule again.'
+      })
+    } finally {
+      setLoadingConfidenceAnalysis(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(ruleId)
+        return newSet
+      })
+    }
   }
 
   const handleApproveRule = async (rule: ComplianceRule) => {
@@ -1511,6 +1555,11 @@ const handlePendingTagFilter = (tag: string) => {
                         const addedOnLabel = addedOnDate && !Number.isNaN(addedOnDate.getTime())
                           ? addedOnDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
                           : null
+                        const confidenceTier = rule.extraction_confidence < 0.80 ? 'low' :
+                                              rule.extraction_confidence <= 0.95 ? 'moderate' : 'high'
+                        const hasLowOrModerateConfidence = confidenceTier !== 'high'
+                        const analysis = confidenceAnalysis[rule.id]
+                        const isLoadingAnalysis = loadingConfidenceAnalysis.has(rule.id)
 
                         return (
                           <Collapsible
@@ -1557,6 +1606,18 @@ const handlePendingTagFilter = (tag: string) => {
                                                 {rule.jurisdiction}
                                               </Badge>
                                             )}
+                                            {hasLowOrModerateConfidence && (
+                                              <Badge
+                                                variant="outline"
+                                                className={
+                                                  confidenceTier === 'low'
+                                                    ? "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40"
+                                                    : "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40"
+                                                }
+                                              >
+                                                {confidenceTier === 'low' ? 'Low' : 'Moderate'} Confidence ({Math.round(rule.extraction_confidence * 100)}%)
+                                              </Badge>
+                                            )}
                                           </div>
                                         </div>
                                         {addedOnLabel && (
@@ -1599,6 +1660,90 @@ const handlePendingTagFilter = (tag: string) => {
                                     </div>
                                   )}
                                 </div>
+
+                                {hasLowOrModerateConfidence && (
+                                  <div className={`rounded-lg border p-4 space-y-3 ${
+                                    confidenceTier === 'low'
+                                      ? 'border-red-500/40 bg-red-50/50 dark:bg-red-950/20'
+                                      : 'border-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20'
+                                  }`}>
+                                    <div className="flex items-start gap-2">
+                                      <AlertCircle className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
+                                        confidenceTier === 'low'
+                                          ? 'text-red-600 dark:text-red-400'
+                                          : 'text-amber-600 dark:text-amber-400'
+                                      }`} />
+                                      <div className="flex-1 space-y-3">
+                                        {isLoadingAnalysis ? (
+                                          <div className={`text-sm ${
+                                            confidenceTier === 'low'
+                                              ? 'text-red-800 dark:text-red-200'
+                                              : 'text-amber-800 dark:text-amber-200'
+                                          }`}>
+                                            Loading confidence analysis...
+                                          </div>
+                                        ) : analysis ? (
+                                          <>
+                                            <div>
+                                              <h5 className={`text-sm font-semibold mb-1 ${
+                                                confidenceTier === 'low'
+                                                  ? 'text-red-900 dark:text-red-100'
+                                                  : 'text-amber-900 dark:text-amber-100'
+                                              }`}>
+                                                Why Confidence is {confidenceTier === 'low' ? 'Low' : 'Moderate'}
+                                              </h5>
+                                              <p className={`text-sm ${
+                                                confidenceTier === 'low'
+                                                  ? 'text-red-800 dark:text-red-200'
+                                                  : 'text-amber-800 dark:text-amber-200'
+                                              }`}>
+                                                {analysis.reason}
+                                              </p>
+                                            </div>
+
+                                            {analysis.questions && analysis.questions.length > 0 && (
+                                              <div>
+                                                <h5 className={`text-sm font-semibold mb-2 ${
+                                                  confidenceTier === 'low'
+                                                    ? 'text-red-900 dark:text-red-100'
+                                                    : 'text-amber-900 dark:text-amber-100'
+                                                }`}>
+                                                  Clarification Questions
+                                                </h5>
+                                                <ul className="space-y-2">
+                                                  {analysis.questions.map((question, idx) => (
+                                                    <li key={idx} className={`text-sm flex items-start gap-2 ${
+                                                      confidenceTier === 'low'
+                                                        ? 'text-red-800 dark:text-red-200'
+                                                        : 'text-amber-800 dark:text-amber-200'
+                                                    }`}>
+                                                      <span className={`font-semibold flex-shrink-0 ${
+                                                        confidenceTier === 'low'
+                                                          ? 'text-red-600 dark:text-red-400'
+                                                          : 'text-amber-600 dark:text-amber-400'
+                                                      }`}>
+                                                        {idx + 1}.
+                                                      </span>
+                                                      <span>{question}</span>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <div className={`text-sm ${
+                                            confidenceTier === 'low'
+                                              ? 'text-red-800 dark:text-red-200'
+                                              : 'text-amber-800 dark:text-amber-200'
+                                          }`}>
+                                            This rule has {confidenceTier} confidence. Expand to see details.
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
 
                                 <div className="flex gap-2 pt-2">
                                   <Button
