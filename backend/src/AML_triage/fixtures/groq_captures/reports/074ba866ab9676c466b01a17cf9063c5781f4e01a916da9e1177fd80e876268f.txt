@@ -1,0 +1,13 @@
+**Executive Summary**
+The case with Trace ID 00881ffe-8651-4346-857c-17a09a8840e6 has been flagged for further investigation due to its suspicious nature, warranting a comprehensive review to determine the legitimacy of the transactions. The recommended action path involves creating an investigation case, escalating it to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer. These steps are crucial in gathering more information and assessing the risk associated with the transactions.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, ensuring all relevant evidence and transaction notes are attached and the case is assigned to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for a more detailed analysis, providing a summary of detected patterns and open questions, and highlighting any looming deadlines for prioritization.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer to collect evidence explaining the origin of funds for the flagged transactions, logging the outreach and setting a reminder to follow up within 5 business days.
+
+**Alternative Actions and Risk Signals**
+No alternative actions were considered due to the lack of provided signals and profile considerations. However, the absence of risk signals and transaction context highlights the need for a thorough investigation to justify the recommended actions. The suspicious nature of the case, as indicated by the screening decision, serves as a primary risk signal.
+
+**Next Steps**
+The reviewer should monitor the case for the customer's response to the source-of-funds documentation request and follow up within 5 business days if no response is received. The reviewer should also verify that the case is properly updated in the CaseWorks record and that all relevant evidence is attached. Outstanding evidence includes the customer's source-of-funds documentation and any additional information that may be required to complete the investigation. A follow-up review is recommended within 10 business days to assess the progress of the investigation and determine if further actions are necessary.

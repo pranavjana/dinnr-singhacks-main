@@ -28,3 +28,35 @@ export async function GET(request: Request) {
     )
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json()
+
+    const response = await fetch(`${BACKEND_API_URL}/api/v1/extraction/rules`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      console.error('Backend create rule error:', response.status, result)
+      return NextResponse.json(
+        { error: result?.detail || 'Failed to create compliance rule' },
+        { status: response.status }
+      )
+    }
+
+    return NextResponse.json(result, { status: response.status })
+  } catch (error) {
+    console.error('Error creating rule:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create compliance rule' },
+      { status: 500 }
+    )
+  }
+}

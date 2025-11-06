@@ -5,11 +5,19 @@ Feature: 003-langgraph-rule-extraction
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, Any
+from datetime import datetime
+from uuid import uuid4
 import structlog
 from workflows.rule_extraction import extract_rules_from_document, extract_rules_batch
 from services.supabase_service import get_supabase_service
 from services.confidence_analyzer import analyze_low_confidence
+from services.manual_rules_store import (
+    list_manual_rules,
+    save_manual_rule,
+    get_manual_rule,
+    update_manual_rule,
+)
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/extraction", tags=["Rule Extraction"])
@@ -64,6 +72,41 @@ class RuleQueryParams(BaseModel):
     validation_status: Literal["pending", "validated", "rejected", "archived"] | None = None
     active_only: bool = True
     limit: int = Field(default=50, le=100)
+
+
+ValidationStatusLiteral = Literal["pending", "validated", "rejected", "archived"]
+
+
+class ComplianceRuleCreateRequest(BaseModel):
+    """Request payload for manually creating a compliance rule."""
+    rule_type: str = Field(min_length=1, description="Rule category, e.g., 'threshold'")
+    jurisdiction: str = Field(min_length=2, description="Jurisdiction code (e.g., 'SG')")
+    regulator: str | None = Field(default=None, description="Regulator name or acronym")
+    description: str | None = Field(default=None, description="Short description of the rule")
+    source_text: str = Field(min_length=1, description="Canonical source text for the rule")
+    applies_to: list[str] = Field(default_factory=list, description="Entities the rule applies to")
+    rule_details: dict[str, Any] = Field(default_factory=dict, description="Structured rule payload")
+    extraction_confidence: float = Field(default=0.9, ge=0.0, le=1.0)
+    effective_date: str | None = None
+    circular_number: str | None = None
+    validation_status: ValidationStatusLiteral = "pending"
+    is_active: bool = True
+
+
+class ComplianceRuleUpdateRequest(BaseModel):
+    """Request payload for updating a compliance rule."""
+    rule_type: str | None = None
+    jurisdiction: str | None = None
+    regulator: str | None = None
+    description: str | None = None
+    source_text: str | None = None
+    applies_to: list[str] | None = None
+    rule_details: dict[str, Any] | None = None
+    extraction_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    effective_date: str | None = None
+    circular_number: str | None = None
+    validation_status: ValidationStatusLiteral | None = None
+    is_active: bool | None = None
 
 
 # Endpoints
@@ -190,6 +233,31 @@ async def get_compliance_rules(
     db = get_supabase_service()
 
     try:
+        def format_rule(record: dict[str, Any]) -> dict[str, Any]:
+            rule_data = record.get("rule_data") or {}
+            return {
+                "id": record["id"],
+                "rule_type": record.get("rule_type"),
+                "description": record.get("description") or "",
+                "jurisdiction": record.get("jurisdiction"),
+                "regulator": record.get("regulator"),
+                "applies_to": rule_data.get("applies_to", []),
+                "rule_details": {
+                    k: v
+                    for k, v in rule_data.items()
+                    if k not in ["applies_to", "source_text", "page_reference", "confidence"]
+                },
+                "source_text": rule_data.get("source_text", ""),
+                "extraction_confidence": record.get("extraction_confidence", 0.0),
+                "effective_date": record.get("effective_date"),
+                "circular_number": record.get("circular_number"),
+                "validation_status": record.get("validation_status", "pending"),
+                "created_at": record.get("created_at"),
+                "updated_at": record.get("updated_at"),
+            }
+
+        formatted_rules: list[dict[str, Any]] = []
+
         # Build query
         query = db.client.table("compliance_rules").select("*")
 
@@ -207,32 +275,34 @@ async def get_compliance_rules(
 
         query = query.order("created_at", desc=True).limit(limit)
 
-        # Execute
+        # Execute Supabase query
         import asyncio
         response = await asyncio.to_thread(query.execute)
 
-        # Format rules according to desired structure
-        formatted_rules = []
         for rule in response.data or []:
-            rule_data = rule.get("rule_data", {})
+            formatted_rules.append(format_rule(rule))
 
-            formatted_rule = {
-                "id": rule["id"],
-                "rule_type": rule["rule_type"],
-                "description": rule.get("description") or "",
-                "jurisdiction": rule["jurisdiction"],
-                "regulator": rule["regulator"],
-                "applies_to": rule_data.get("applies_to", []),
-                "rule_details": {k: v for k, v in rule_data.items() if k not in ["applies_to", "source_text", "page_reference", "confidence"]},
-                "source_text": rule_data.get("source_text", ""),
-                "extraction_confidence": rule["extraction_confidence"],
-                "effective_date": rule.get("effective_date"),
-                "circular_number": rule.get("circular_number"),
-                "validation_status": rule["validation_status"],
-                "created_at": rule.get("created_at"),
-                "updated_at": rule.get("updated_at"),
-            }
-            formatted_rules.append(formatted_rule)
+        # Merge manual rules
+        manual_rules = list_manual_rules()
+        for manual_rule in manual_rules:
+            if jurisdiction and manual_rule.get("jurisdiction") != jurisdiction:
+                continue
+            if rule_type and manual_rule.get("rule_type") != rule_type:
+                continue
+            if validation_status and manual_rule.get("validation_status") != validation_status:
+                continue
+            if active_only and manual_rule.get("is_active") is False:
+                continue
+            formatted_rules.append(format_rule(manual_rule))
+
+        # Sort combined rules by updated_at/created_at descending
+        def _sort_key(rule: dict[str, Any]):
+            return rule.get("updated_at") or rule.get("created_at") or ""
+
+        formatted_rules.sort(key=_sort_key, reverse=True)
+
+        if limit:
+            formatted_rules = formatted_rules[:limit]
 
         return {
             "count": len(formatted_rules),
@@ -242,6 +312,65 @@ async def get_compliance_rules(
     except Exception as e:
         logger.error("Failed to query rules", error=str(e))
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+
+
+@router.post("/rules", status_code=201)
+async def create_compliance_rule_endpoint(request: ComplianceRuleCreateRequest):
+    """
+    Manually create a compliance rule entry.
+    """
+    db = get_supabase_service()
+
+    def _clean_list(values: list[str]) -> list[str]:
+        return [item.strip() for item in values if isinstance(item, str) and item.strip()]
+
+    try:
+        rule_type = request.rule_type.strip()
+        jurisdiction = request.jurisdiction.strip().upper()
+        regulator = request.regulator.strip() if isinstance(request.regulator, str) else None
+        description = request.description.strip() if isinstance(request.description, str) else request.description
+        source_text = request.source_text.strip()
+
+        rule_data = dict(request.rule_details) if request.rule_details else {}
+        rule_data["applies_to"] = _clean_list(request.applies_to)
+        rule_data["source_text"] = source_text
+
+        now_iso = datetime.utcnow().isoformat()
+        payload = {
+            "rule_type": rule_type,
+            "jurisdiction": jurisdiction,
+            "regulator": regulator,
+            "description": description,
+            "rule_data": rule_data,
+            "extraction_confidence": request.extraction_confidence,
+            "effective_date": request.effective_date,
+            "circular_number": request.circular_number,
+            "validation_status": request.validation_status,
+            "is_active": request.is_active,
+            "updated_at": now_iso,
+        }
+
+        # Preserve creation timestamp if Supabase handles it; otherwise set explicitly
+        payload.setdefault("created_at", now_iso)
+
+        if request.validation_status == "validated":
+            payload.setdefault("validated_at", now_iso)
+
+        rule_id = await db.create_compliance_rule(payload)
+        if rule_id:
+            logger.info("Compliance rule created via API", rule_id=rule_id, rule_type=request.rule_type)
+            return {"status": "success", "rule_id": rule_id}
+
+        fallback_id = save_manual_rule({**payload, "id": str(uuid4())})
+        logger.info("Compliance rule stored locally", rule_id=fallback_id, rule_type=request.rule_type)
+        return {"status": "success", "rule_id": fallback_id, "source": "manual-store"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to create compliance rule via Supabase, falling back to local store", error=str(e))
+        fallback_id = save_manual_rule({**payload, "id": str(uuid4())})
+        return {"status": "success", "rule_id": fallback_id, "source": "manual-store"}
 
 
 @router.get("/rules/{rule_id}")
@@ -262,6 +391,9 @@ async def get_rule_by_id(rule_id: str):
         )
 
         if not response.data:
+            manual_rule = get_manual_rule(rule_id)
+            if manual_rule:
+                return manual_rule
             raise HTTPException(status_code=404, detail="Rule not found")
 
         return response.data
@@ -271,6 +403,140 @@ async def get_rule_by_id(rule_id: str):
     except Exception as e:
         logger.error("Failed to fetch rule", rule_id=rule_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Failed to fetch rule: {str(e)}")
+
+
+@router.put("/rules/{rule_id}")
+async def update_compliance_rule_endpoint(rule_id: str, request: ComplianceRuleUpdateRequest):
+    """
+    Update an existing compliance rule entry.
+    """
+    db = get_supabase_service()
+
+    def _clean_list(values: list[str]) -> list[str]:
+        return [item.strip() for item in values if isinstance(item, str) and item.strip()]
+
+    manual_rule = get_manual_rule(rule_id)
+    is_manual_rule = manual_rule is not None
+    existing_record: dict[str, Any] | None = manual_rule
+
+    if not is_manual_rule:
+        try:
+            import asyncio
+
+            existing_response = await asyncio.to_thread(
+                lambda: db.client.table("compliance_rules")
+                .select("*")
+                .eq("id", rule_id)
+                .single()
+                .execute()
+            )
+
+            existing_record = existing_response.data
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error("Failed to fetch rule from Supabase", rule_id=rule_id, error=str(e))
+            existing_record = None
+
+    if not existing_record:
+        raise HTTPException(status_code=404, detail="Rule not found")
+
+    try:
+        existing_rule_data = existing_record.get("rule_data") or {}
+        rule_data = dict(existing_rule_data)
+        rule_data_changed = False
+
+        if request.rule_details is not None:
+            # Preserve meta fields we manage separately
+            preserved_meta = {
+                key: value
+                for key, value in existing_rule_data.items()
+                if key in {"applies_to", "source_text", "page_reference", "confidence"}
+            }
+            rule_data = dict(request.rule_details)
+            rule_data.update(preserved_meta)
+            rule_data_changed = True
+
+        if request.applies_to is not None:
+            rule_data["applies_to"] = _clean_list(request.applies_to)
+            rule_data_changed = True
+
+        if request.source_text is not None:
+            rule_data["source_text"] = request.source_text
+            rule_data_changed = True
+
+        updates: dict[str, Any] = {}
+
+        if request.rule_type is not None:
+            updates["rule_type"] = request.rule_type.strip()
+        if request.jurisdiction is not None:
+            updates["jurisdiction"] = request.jurisdiction.strip().upper()
+        if request.regulator is not None:
+            updates["regulator"] = request.regulator.strip()
+        if request.description is not None:
+            updates["description"] = request.description.strip()
+        if request.extraction_confidence is not None:
+            updates["extraction_confidence"] = request.extraction_confidence
+        if request.effective_date is not None:
+            updates["effective_date"] = request.effective_date
+        if request.circular_number is not None:
+            updates["circular_number"] = request.circular_number
+        if request.validation_status is not None:
+            updates["validation_status"] = request.validation_status
+            if request.validation_status == "validated":
+                updates.setdefault("validated_at", datetime.utcnow().isoformat())
+        if request.is_active is not None:
+            updates["is_active"] = request.is_active
+
+        if rule_data_changed:
+            updates["rule_data"] = rule_data
+
+        if not updates:
+            raise HTTPException(status_code=400, detail="No updates provided")
+
+        updates["updated_at"] = datetime.utcnow().isoformat()
+
+        if is_manual_rule:
+            manual_success = update_manual_rule(rule_id, updates)
+            if not manual_success:
+                raise HTTPException(status_code=500, detail="Failed to update manual compliance rule")
+            logger.info("Manual compliance rule updated locally", rule_id=rule_id, updated_fields=list(updates.keys()))
+            return {"status": "success", "rule_id": rule_id, "source": "manual-store"}
+
+        success = await db.update_compliance_rule(rule_id, updates)
+        if not success:
+            # Fallback to manual store if Supabase update fails
+            manual_success = update_manual_rule(rule_id, updates)
+            if manual_success:
+                logger.info(
+                    "Compliance rule updated via manual store fallback",
+                    rule_id=rule_id,
+                    updated_fields=list(updates.keys())
+                )
+                return {"status": "success", "rule_id": rule_id, "source": "manual-store"}
+
+            manual_payload = {
+                **existing_record,
+                **updates,
+                "id": rule_id,
+                "rule_data": rule_data if rule_data_changed else existing_record.get("rule_data", {}),
+            }
+            save_manual_rule(manual_payload)
+            logger.info(
+                "Compliance rule stored locally after Supabase update failure",
+                rule_id=rule_id,
+                updated_fields=list(updates.keys())
+            )
+            return {"status": "success", "rule_id": rule_id, "source": "manual-store"}
+
+        logger.info("Compliance rule updated via API", rule_id=rule_id, updated_fields=list(updates.keys()))
+        return {"status": "success", "rule_id": rule_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to update compliance rule", rule_id=rule_id, error=str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to update compliance rule: {str(e)}")
 
 
 @router.get("/metrics/recent")

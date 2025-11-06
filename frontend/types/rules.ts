@@ -65,3 +65,23 @@ export interface ExtractionMetricsResponse {
   count: number
   metrics: ExtractionMetric[]
 }
+
+export interface ComplianceRuleCreatePayload {
+  rule_type: string
+  jurisdiction: string
+  regulator?: string
+  description?: string
+  source_text: string
+  applies_to: string[]
+  rule_details: Record<string, unknown>
+  extraction_confidence: number
+  effective_date?: string
+  circular_number?: string
+  validation_status?: ValidationStatus
+  is_active?: boolean
+}
+
+export type ComplianceRuleUpdatePayload = Partial<ComplianceRuleCreatePayload> & {
+  rule_details?: Record<string, unknown>
+  applies_to?: string[]
+}

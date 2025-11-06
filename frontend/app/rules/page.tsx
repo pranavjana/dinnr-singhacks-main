@@ -31,13 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCw, Shield, CheckCircle, XCircle, AlertCircle, Download, ChevronDown, Check } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
+import { RefreshCw, Shield, CheckCircle, XCircle, AlertCircle, Download, ChevronDown, Check, Plus, Pencil } from "lucide-react"
+import { useState, useEffect, FormEvent } from "react"
 import { api } from "@/lib/api"
 import type {
   ComplianceRule,
   ComplianceRulesResponse,
-  BatchExtractionResponse
+  BatchExtractionResponse,
+  ValidationStatus
 } from "@/types/rules"
 import { toast } from "sonner"
 
@@ -744,6 +750,39 @@ const CATEGORY_COLOR_MAP: Record<string, string> = {
   default: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-transparent",
 }
 
+type RuleFormState = {
+  ruleTitle: string
+  ruleType: string
+  jurisdiction: string
+  regulator: string
+  description: string
+  effectiveDate: string
+  validationStatus: ValidationStatus
+}
+
+const getEmptyRuleForm = (): RuleFormState => ({
+  ruleTitle: "",
+  ruleType: "manual",
+  jurisdiction: "",
+  regulator: "",
+  description: "",
+  effectiveDate: "",
+  validationStatus: "pending",
+})
+
+const toInputDate = (value: string | undefined) => {
+  if (!value) {
+    return ""
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ""
+  }
+
+  return date.toISOString().slice(0, 10)
+}
+
 const getCategoryColorClass = (category: string) => {
   const key = category.toLowerCase()
   return CATEGORY_COLOR_MAP[key] || CATEGORY_COLOR_MAP.default
@@ -848,6 +887,11 @@ export default function RulesPage() {
   const [approvingRules, setApprovingRules] = useState<Set<string>>(new Set())
   const [confidenceAnalysis, setConfidenceAnalysis] = useState<Record<string, { reason: string; questions: string[]; tier: string }>>({})
   const [loadingConfidenceAnalysis, setLoadingConfidenceAnalysis] = useState<Set<string>>(new Set())
+  const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false)
+  const [ruleDialogMode, setRuleDialogMode] = useState<'create' | 'edit'>('create')
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null)
+  const [ruleForm, setRuleForm] = useState<RuleFormState>(getEmptyRuleForm())
+  const [isSavingRule, setIsSavingRule] = useState(false)
 
   // Filter states for current rules
   const [filterRuleType, setFilterRuleType] = useState<string>('all')
@@ -1150,6 +1194,151 @@ export default function RulesPage() {
     setPendingDateRange('all')
   }
 
+  const resetRuleDialog = () => {
+    setRuleDialogMode('create')
+    setSelectedRuleId(null)
+    setRuleForm(getEmptyRuleForm())
+    setIsSavingRule(false)
+  }
+
+  const handleRuleDialogOpenChange = (open: boolean) => {
+    setIsRuleDialogOpen(open)
+    if (!open) {
+      resetRuleDialog()
+    }
+  }
+
+  const buildRuleFormFromRule = (rule: ComplianceRule): RuleFormState => {
+    const normalizedTitle = rule.description?.trim() || getRuleTitle(rule) || formatToTitleCase(rule.rule_type || "Manual Rule")
+    return {
+      ruleTitle: normalizedTitle,
+      ruleType: rule.rule_type || "manual",
+      jurisdiction: rule.jurisdiction || "",
+      regulator: rule.regulator || "",
+      description: rule.source_text || "",
+      effectiveDate: toInputDate(rule.effective_date),
+      validationStatus: rule.validation_status ?? "pending",
+    }
+  }
+
+  const openCreateRuleDialog = () => {
+    resetRuleDialog()
+    const baseForm = getEmptyRuleForm()
+    if (filterRuleType !== 'all') {
+      baseForm.ruleType = filterRuleType
+    }
+    setRuleForm(baseForm)
+    setIsRuleDialogOpen(true)
+  }
+
+  const openEditRuleDialog = (rule: ComplianceRule) => {
+    setRuleDialogMode('edit')
+    setSelectedRuleId(rule.id)
+    setRuleForm(buildRuleFormFromRule(rule))
+    setIsRuleDialogOpen(true)
+  }
+
+  const handleRuleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (isSavingRule) {
+      return
+    }
+
+    const ruleTitle = ruleForm.ruleTitle.trim()
+    const ruleType = (ruleForm.ruleType || "manual").trim()
+    const jurisdiction = ruleForm.jurisdiction.trim()
+    const regulator = ruleForm.regulator.trim()
+    const description = ruleForm.description.trim()
+    const effectiveDate = ruleForm.effectiveDate ? ruleForm.effectiveDate : undefined
+
+    if (!ruleTitle || !jurisdiction || !description) {
+      toast.error("Missing required fields", {
+        description: "Rule title, jurisdiction, and description are required.",
+      })
+      return
+    }
+
+    const existingRule = selectedRuleId
+      ? rules.find(rule => rule.id === selectedRuleId)
+      : undefined
+
+    if (ruleDialogMode === 'edit' && selectedRuleId && !existingRule) {
+      toast.error("Unable to load rule", {
+        description: "The selected rule could not be found. Please refresh and try again.",
+      })
+      return
+    }
+
+    const appliesTo = existingRule?.applies_to ?? []
+    const ruleDetails = existingRule?.rule_details ?? {}
+    const extractionConfidence = existingRule?.extraction_confidence ?? 0.9
+    const validationStatus =
+      ruleDialogMode === 'edit'
+        ? existingRule?.validation_status ?? ruleForm.validationStatus
+        : ruleForm.validationStatus
+
+    const payload = {
+      rule_type: ruleType,
+      jurisdiction,
+      regulator: regulator || undefined,
+      description: ruleTitle,
+      source_text: description || ruleTitle,
+      applies_to: ruleDialogMode === 'edit' ? appliesTo : [],
+      rule_details: ruleDialogMode === 'edit' ? ruleDetails : {},
+      extraction_confidence: extractionConfidence,
+      effective_date: effectiveDate,
+      circular_number: existingRule?.circular_number,
+      validation_status: validationStatus,
+    }
+
+    setIsSavingRule(true)
+
+    try {
+      if (ruleDialogMode === 'create') {
+        await api.createRule({ ...payload, is_active: true })
+      } else {
+        if (!selectedRuleId) {
+          toast.error("Select a rule to edit", {
+            description: "Choose a rule before saving your changes.",
+          })
+          return
+        }
+        await api.updateRule(selectedRuleId, payload)
+      }
+
+      const action = ruleDialogMode === 'create' ? 'Manual Rule Created' : 'Manual Rule Updated'
+      const auditEntry: AuditLogEntry = {
+        id: crypto.randomUUID(),
+        timestamp: new Date(),
+        dateUpdated: new Date(),
+        action,
+        user: 'User',
+        rulesCreated: ruleDialogMode === 'create' ? 1 : 0,
+        rulesUpdated: ruleDialogMode === 'edit' ? 1 : 0,
+        status: 'success',
+        details: `${ruleDialogMode === 'create' ? 'Created' : 'Updated'} ${ruleType} rule (${jurisdiction})`
+      }
+      setAuditLog(prev => [auditEntry, ...prev])
+      await saveAuditEntry(auditEntry)
+
+      toast.success(ruleDialogMode === 'create' ? 'Rule created' : 'Rule updated', {
+        description: `${ruleType} rule for ${jurisdiction} ${ruleDialogMode === 'create' ? 'added' : 'saved'} successfully.`,
+      })
+
+      await loadRules()
+      setIsRuleDialogOpen(false)
+    } catch (error) {
+      console.error('Failed to save rule:', error)
+      toast.error('Failed to save rule', {
+        description: error instanceof Error ? error.message : 'Unexpected error occurred while saving the rule.',
+      })
+    } finally {
+      setIsSavingRule(false)
+    }
+  }
+
+  const isRuleSubmitDisabled = isSavingRule || (ruleDialogMode === 'edit' && !selectedRuleId)
+
 const handleTagFilter = (tag: string) => {
   setFilterRuleType(current => (current === tag ? 'all' : tag))
 }
@@ -1255,6 +1444,111 @@ const handlePendingTagFilter = (tag: string) => {
         duration={4000}
         loop={false}
       />
+      <Dialog open={isRuleDialogOpen} onOpenChange={handleRuleDialogOpenChange}>
+        <DialogContent className="sm:max-w-md md:max-w-xl p-0 bg-transparent border-none shadow-none">
+          <DialogTitle className="sr-only">
+            {ruleDialogMode === 'create' ? 'Add Compliance Rule' : 'Edit Compliance Rule'}
+          </DialogTitle>
+          <Card className="w-full max-w-md md:max-w-xl mx-auto bg-card p-0">
+            <CardHeader className="p-6 pb-4 space-y-1">
+              <CardTitle className="text-xl font-semibold">
+                {ruleDialogMode === 'create' ? 'Add Compliance Rule' : 'Edit Compliance Rule'}
+              </CardTitle>
+              <CardDescription>
+                {ruleDialogMode === 'create'
+                  ? 'Capture a concise manual rule entry for quick review.'
+                  : 'Update the primary details for this compliance rule.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <form id="rule-form" onSubmit={handleRuleSubmit} className="space-y-4">
+                <div className="space-y-3">
+                  <Label htmlFor="ruleTitle" className="text-base font-semibold text-foreground">
+                    Rule Title
+                  </Label>
+                  <Input
+                    id="ruleTitle"
+                    value={ruleForm.ruleTitle}
+                    onChange={(event) => setRuleForm(prev => ({ ...prev, ruleTitle: event.target.value }))}
+                    className="h-10 text-base font-medium"
+                    placeholder="Enter a concise rule title"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2.5">
+                  <Label htmlFor="ruleType" className="text-sm font-medium text-muted-foreground">
+                    Rule Type
+                  </Label>
+                  <Input
+                    id="ruleType"
+                    value={formatToTitleCase(ruleForm.ruleType)}
+                    readOnly
+                    className="h-10"
+                  />
+                </div>
+                <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+                  <div className="flex-1 space-y-2.5">
+                    <Label htmlFor="jurisdiction" className="text-sm font-medium text-muted-foreground">
+                      Jurisdiction
+                    </Label>
+                    <Input
+                      id="jurisdiction"
+                      value={ruleForm.jurisdiction}
+                      onChange={(event) => setRuleForm(prev => ({ ...prev, jurisdiction: event.target.value.toUpperCase() }))}
+                      placeholder="e.g. SG"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2.5">
+                    <Label htmlFor="regulator" className="text-sm font-medium text-muted-foreground">
+                      Regulator
+                    </Label>
+                    <Input
+                      id="regulator"
+                      value={ruleForm.regulator}
+                      onChange={(event) => setRuleForm(prev => ({ ...prev, regulator: event.target.value }))}
+                      placeholder="e.g. MAS"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="description" className="text-sm font-medium text-muted-foreground">
+                    Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={ruleForm.description}
+                    onChange={(event) => setRuleForm(prev => ({ ...prev, description: event.target.value }))}
+                    rows={7}
+                    placeholder="Provide the core regulatory requirement or summary."
+                    className="min-h-[200px] md:min-h-[240px] w-full resize-y text-sm leading-6"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="effectiveDate" className="text-sm font-medium text-muted-foreground">
+                    Effective Date
+                  </Label>
+                  <Input
+                    id="effectiveDate"
+                    type="date"
+                    value={ruleForm.effectiveDate}
+                    onChange={(event) => setRuleForm(prev => ({ ...prev, effectiveDate: event.target.value }))}
+                    className="h-9"
+                  />
+                </div>
+              </form>
+            </CardContent>
+            <CardFooter className="p-6 pt-0 flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setIsRuleDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" form="rule-form" disabled={isRuleSubmitDisabled} className="gap-2">
+                {isSavingRule && <RefreshCw className="h-4 w-4 animate-spin" />}
+                {ruleDialogMode === 'create' ? 'Create Rule' : 'Save Changes'}
+              </Button>
+            </CardFooter>
+          </Card>
+        </DialogContent>
+      </Dialog>
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
@@ -1286,14 +1580,25 @@ const handlePendingTagFilter = (tag: string) => {
               <Shield className="h-6 w-6" />
               <h1 className="text-2xl font-bold">Compliance Rules</h1>
             </div>
-            <Button
-              onClick={handleGenerateRules}
-              disabled={isGenerating}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
-              {isGenerating ? 'Generating...' : 'Generate Updated Rules'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={openCreateRuleDialog}
+              >
+                <Plus className="h-4 w-4" />
+                Add Rule
+              </Button>
+              <Button
+                onClick={handleGenerateRules}
+                disabled={isGenerating}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+                {isGenerating ? 'Generating...' : 'Generate Updated Rules'}
+              </Button>
+            </div>
           </div>
 
           <Tabs defaultValue="current" className="w-full min-w-0">
@@ -1436,11 +1741,26 @@ const handlePendingTagFilter = (tag: string) => {
                                   </div>
                                 </div>
                               </div>
-                              {addedOnLabel && (
-                                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                  Added {addedOnLabel}
-                                </span>
-                              )}
+                              <div className="flex items-center gap-2 whitespace-nowrap">
+                                {addedOnLabel && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Added {addedOnLabel}
+                                  </span>
+                                )}
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 gap-1 px-2"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    openEditRuleDialog(rule)
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  Edit
+                                </Button>
+                              </div>
                             </div>
                             <p className="text-sm text-muted-foreground mb-3">{rule.source_text}</p>
                             <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -1620,11 +1940,26 @@ const handlePendingTagFilter = (tag: string) => {
                                             )}
                                           </div>
                                         </div>
-                                        {addedOnLabel && (
-                                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                            Captured {addedOnLabel}
-                                          </span>
-                                        )}
+                                        <div className="flex items-center gap-2 whitespace-nowrap">
+                                          {addedOnLabel && (
+                                            <span className="text-xs text-muted-foreground">
+                                              Captured {addedOnLabel}
+                                            </span>
+                                          )}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 gap-1 px-2"
+                                            onClick={(event) => {
+                                              event.stopPropagation()
+                                              openEditRuleDialog(rule)
+                                            }}
+                                          >
+                                            <Pencil className="h-4 w-4" />
+                                            Edit
+                                          </Button>
+                                        </div>
                                       </div>
                                       <CollapsibleTrigger className="w-full text-left">
                                         <p className={`text-sm text-muted-foreground ${isExpanded ? '' : 'truncate'}`}>

@@ -182,6 +182,39 @@ class SupabaseService:
             logger.error("Failed to create compliance rule", error=str(e), rule_data=rule_data)
             return None
 
+    async def update_compliance_rule(self, rule_id: str, updates: dict) -> bool:
+        """
+        Update an existing compliance rule.
+
+        Args:
+            rule_id: UUID of the rule to update
+            updates: Dict of fields to update
+
+        Returns:
+            True if an update occurred, False otherwise
+        """
+        if not updates:
+            return True
+
+        try:
+            response = await asyncio.to_thread(
+                lambda: self.client.table("compliance_rules")
+                .update(updates)
+                .eq("id", rule_id)
+                .execute()
+            )
+
+            if response.data:
+                logger.info("Updated compliance rule", rule_id=rule_id, updated_fields=list(updates.keys()))
+                return True
+
+            logger.warning("No compliance rule updated", rule_id=rule_id, updates=updates)
+            return False
+
+        except Exception as e:
+            logger.error("Failed to update compliance rule", rule_id=rule_id, error=str(e), updates=updates)
+            return False
+
     async def find_duplicate_rules(
         self,
         jurisdiction: str,
