@@ -704,7 +704,7 @@ export default function Page() {
                   <div className="flex flex-col">
                     {/* Column Headers */}
                     <div className="sticky top-0 z-10 flex items-center px-4 py-3 text-xs font-semibold text-muted-foreground border-b backdrop-blur-[11.9px] bg-muted/90">
-                      <div className="flex-[1.5]">PEOPLE</div>
+                      <div className="flex-[1.5]">ORIGINATOR</div>
                       <div className="flex-[1.2]">PAYMENT METHOD</div>
                       <div
                         className="flex-[1.2] flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
@@ -757,7 +757,7 @@ export default function Page() {
                             className="flex items-center px-4 py-3 cursor-pointer transition-all hover:bg-muted/30"
                             onClick={() => toggleCard(index)}
                           >
-                            {/* PEOPLE */}
+                            {/* ORIGINATOR */}
                             <div className="flex-[1.5]">
                               <span className="text-sm truncate block">
                                 {transaction.originator_name || transaction.merchant || 'Unknown'}
