@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID d6d5c942-f311-4a8d-8667-64c3a0fa09ec has been flagged for further investigation due to a screening decision of SUS, indicating potential suspicious activity. Although specific risk signals and transaction context are not provided, the recommended action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer. These steps aim to gather more information and assess the risk associated with the flagged transactions.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information and assess the risk associated with the flagged transactions. However, if the customer fails to respond or provides incomplete evidence, the case may be flagged for further escalation.
+
+**Risk Signals and Transaction Context**
+Although specific risk signals and transaction context are not provided, the screening decision of SUS indicates potential suspicious activity, justifying the recommended actions to gather more information and assess the risk.
+
+**Next Steps**
+The reviewer should monitor the case for updates, including the customer's response to the source-of-funds documentation request, and follow up within 5 business days. The reviewer should also verify that the case references the current trace ID and screening decision. Outstanding evidence includes the customer's source-of-funds documentation and any additional information that may be required to assess the risk associated with the flagged transactions.

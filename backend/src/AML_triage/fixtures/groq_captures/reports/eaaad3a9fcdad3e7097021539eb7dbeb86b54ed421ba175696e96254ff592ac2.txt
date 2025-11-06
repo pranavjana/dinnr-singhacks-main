@@ -1,0 +1,16 @@
+**Executive Summary**
+The case with Trace ID 9f049cdf-7481-44eb-8e36-6cc3638bba81 has been flagged for further investigation due to an unspecified risk level and a screening decision of SUS. To proceed, it is recommended to create an investigation case, escalate to a Level 2 AML analyst for deeper analysis, and request source-of-funds documentation from the customer. These actions will ensure the alert is properly tracked, thoroughly analyzed, and supported by sufficient evidence.
+
+**Recommended Actions:**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, including updating the CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for complex analysis, submitting an escalation request with a summary of detected patterns and open questions, and highlighting any looming deadlines.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template, logging the outreach, and setting a reminder to chase within 5 business days.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary objective is to gather more information and conduct a thorough analysis. However, if the customer fails to respond or provides incomplete evidence, the case may be flagged for further escalation.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the screening decision of SUS and unspecified risk level justify the need for further investigation and analysis.
+
+**Next Steps**
+The reviewer should monitor the case for updates, follow up on the source-of-funds documentation request within 5 business days, and verify that the case is properly tracked within the internal case management system. Outstanding evidence required includes the source-of-funds documentation and any additional information that may be requested by the Level 2 AML analyst during the escalation process.

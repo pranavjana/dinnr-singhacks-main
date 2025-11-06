@@ -1,0 +1,16 @@
+**Executive Summary**
+The case has been flagged for further investigation due to a suspicious transaction alert with an unspecified risk level. Given the lack of provided signals, profile considerations, and transaction snapshot, it is essential to create an investigation case and escalate it to a Level 2 AML analyst for deeper analysis. The recommended action path involves creating a CaseWorks record, attaching relevant evidence, and assigning the case to the appropriate investigation queue. Additionally, requesting source-of-funds documentation from the customer will help clarify the origin of funds for the flagged transactions.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) and update the CaseWorks record with the latest alert context and transaction notes.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for further analysis, highlighting any looming deadlines for prioritization.
+* Request source-of-funds documentation from the customer (Action ID: REQUEST_SOF_DOCS) using the pre-approved template and log the outreach in the case journal.
+
+**Alternative Actions and Rationale**
+No alternative actions are recommended at this stage, as the primary objective is to gather more information and context about the suspicious transaction. However, if the customer fails to respond or provides incomplete evidence, the case may need to be escalated further or additional actions taken.
+
+**Risk Signals and Transaction Context**
+Although no specific risk signals or transaction context are provided, the suspicious transaction alert and unspecified risk level justify the need for further investigation and analysis.
+
+**Next Steps**
+The reviewer should monitor the case for updates, follow up with the customer within 5 business days if necessary, and review the case journal for any new information or evidence. The reviewer should also verify that the case references the current trace ID and screening decision. Outstanding evidence required includes source-of-funds documentation and any additional information that may be requested by the Level 2 AML analyst during their review. A follow-up review is recommended within 10 business days to assess the progress of the investigation and determine if further actions are required.

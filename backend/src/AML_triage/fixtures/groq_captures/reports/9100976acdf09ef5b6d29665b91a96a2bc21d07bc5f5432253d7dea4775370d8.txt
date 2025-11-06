@@ -1,0 +1,13 @@
+**Executive Summary**
+The case with Trace ID 20dd28bb-8372-4aa2-bc6a-af4b48221e94 has been flagged for further investigation due to a screening decision of SUS, indicating potential suspicious activity. Given the lack of provided signals, profile considerations, and transaction snapshot, a thorough investigation is necessary to determine the legitimacy of the transactions. The recommended action path involves creating an investigation case, escalating to a Level 2 AML analyst for deeper analysis, and requesting source-of-funds documentation from the customer.
+
+**Recommended Actions**
+* Create an investigation case (Action ID: CREATE_CASE) to track the alert within the internal case management system, ensuring the case references the current trace ID and screening decision.
+* Escalate the case to a Level 2 AML analyst (Action ID: ESCALATE_L2_AML) for specialist review, submitting an escalation request with a summary of detected patterns and open questions.
+* Request source-of-funds documentation (Action ID: REQUEST_SOF_DOCS) from the customer, sending a pre-approved template and logging the outreach in the case journal.
+
+**Alternative Actions and Risk Signals**
+No alternative actions are recommended at this stage, as the primary goal is to gather more information about the transactions and the customer's activities. The lack of provided signals and context highlights the need for a thorough investigation to identify potential risk signals and determine the appropriate course of action.
+
+**Next Steps**
+The reviewer should monitor the case for the customer's response to the source-of-funds documentation request, following up within 5 business days if necessary. The reviewer should also track the progress of the Level 2 AML analyst's investigation and be prepared to provide additional information or support as needed. Outstanding evidence required includes the customer's source-of-funds documentation and any additional information that may be requested by the Level 2 AML analyst during their investigation.

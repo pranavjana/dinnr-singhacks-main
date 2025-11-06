@@ -23,6 +23,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -31,7 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState, useEffect } from "react"
-import { ChevronDown, ChevronUp, Trash2, Check, Search, Calendar, X } from "lucide-react"
+import { ChevronDown, ChevronUp, Trash2, Check, Search, Calendar, X, ClipboardCheck } from "lucide-react"
 import { api } from "@/lib/api"
 import { toast } from "sonner"
 
@@ -53,6 +54,8 @@ interface Verdict {
   rule_references?: string[]
   notable_transactions?: any[]
   recommended_actions?: string[]
+  manual_override?: 'pass_with_review'
+  override_notes?: string
 }
 
 interface TriageResult {
@@ -98,6 +101,8 @@ export default function Page() {
   const [isLoading, setIsLoading] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set())
   const [showAllFields, setShowAllFields] = useState<Set<number>>(new Set())
+  const [overrideReasons, setOverrideReasons] = useState<Record<string, string>>({})
+  const [showOverrideReason, setShowOverrideReason] = useState<Record<string, boolean>>({})
 
   // Filter states
   const [dateRange, setDateRange] = useState("all")
@@ -232,6 +237,125 @@ export default function Page() {
         description: error instanceof Error ? error.message : "Failed to save action",
       })
     }
+  }
+
+  const getOverrideKey = (transactionId: string | undefined, index: number) =>
+    transactionId ?? `index-${index}`
+
+  const handleManualOverride = async (
+    transactionId: string | undefined,
+    index: number,
+    reason: string
+  ) => {
+    if (!transactionId || transactionId === 'undefined') {
+      toast.error("Cannot update transaction", {
+        description: "Transaction has no valid ID",
+      })
+      return
+    }
+
+    const transaction = transactions[index]
+    if (!transaction) {
+      return
+    }
+
+    const nowIso = new Date().toISOString()
+    const trimmedReason = reason.trim()
+    if (!trimmedReason) {
+      toast.error("Reason required", {
+        description: "Please provide a reason for passing this transaction with review.",
+      })
+      return
+    }
+
+    const overrideNote = `Manually marked as pass with review on ${new Date().toLocaleString()}. Reason: ${trimmedReason}`
+
+    const updatedVerdict: Verdict = {
+      assigned_team: transaction.verdict?.assigned_team ?? 'Manual Review Team',
+      risk_score: transaction.verdict?.risk_score ?? 0,
+      ...(transaction.verdict ?? {}),
+      verdict: 'pass',
+      manual_override: 'pass_with_review',
+      override_notes: overrideNote,
+    }
+
+    const updatedTriage: TriageResult | undefined = transaction.triage
+      ? {
+          ...transaction.triage,
+          screening_result: {
+            ...(transaction.triage?.screening_result ?? {}),
+            decision: 'pass_with_review',
+            override_notes: overrideNote,
+          },
+        }
+      : {
+          screening_result: {
+            decision: 'pass_with_review',
+            override_notes: overrideNote,
+          },
+          triage_plan: '',
+        }
+
+    const userAction = 'pass_with_review'
+
+    try {
+      await updateTransactionInDb(transactionId, {
+        verdict: updatedVerdict,
+        triage: updatedTriage,
+        user_action: userAction,
+        user_action_timestamp: nowIso,
+        user_action_by: 'current_user',
+      })
+
+      setTransactions(prev =>
+        prev.map((txn, idx) =>
+          idx === index
+            ? {
+                ...txn,
+                verdict: updatedVerdict,
+                triage: updatedTriage,
+                user_action: userAction,
+                user_action_timestamp: nowIso,
+                user_action_by: 'current_user',
+              }
+            : txn
+        )
+      )
+
+      const overrideKey = getOverrideKey(transactionId, index)
+      setOverrideReasons(prev => ({
+        ...prev,
+        [overrideKey]: '',
+      }))
+      setShowOverrideReason(prev => ({
+        ...prev,
+        [overrideKey]: false,
+      }))
+
+      toast.success("Transaction updated", {
+        description: "Marked as pass with review.",
+      })
+    } catch (error) {
+      console.error('Failed to override verdict:', error)
+      toast.error("Error updating transaction", {
+        description: error instanceof Error ? error.message : "Failed to update transaction",
+      })
+    }
+  }
+
+  const handlePassWithReviewClick = (transactionId: string | undefined, index: number) => {
+    const overrideKey = getOverrideKey(transactionId, index)
+    const isOpen = showOverrideReason[overrideKey] ?? false
+    if (!isOpen) {
+      setShowOverrideReason(prev => ({
+        ...prev,
+        [overrideKey]: true,
+      }))
+      return
+    }
+
+    const reason = overrideReasons[overrideKey] ?? ''
+    handleManualOverride(transactionId, index, reason)
   }
 
   const loadTransaction = async () => {
@@ -1087,6 +1211,46 @@ export default function Page() {
                                           })
                                         ) : (
                                           <span className="text-sm text-muted-foreground italic">No actions required</span>
+                                        )}
+                                      </div>
+
+                                      <div className="mt-4 p-4 border rounded-lg bg-muted/20 space-y-3">
+                                        <div className="text-xs text-muted-foreground uppercase tracking-wider">
+                                          Manual Override
+                                        </div>
+                                        {transaction.verdict?.override_notes && (
+                                          <p className="text-xs text-muted-foreground italic">
+                                            Last override: {transaction.verdict.override_notes}
+                                          </p>
+                                        )}
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handlePassWithReviewClick(transaction.id, index)}
+                                          disabled={!transaction.id}
+                                          className="gap-1.5 border-emerald-500/50 text-emerald-700 hover:bg-emerald-500/10"
+                                        >
+                                          <ClipboardCheck className="h-4 w-4" />
+                                          {showOverrideReason[getOverrideKey(transaction.id, index)] ? 'Confirm Pass with Review' : 'Pass with Review'}
+                                        </Button>
+                                        {showOverrideReason[getOverrideKey(transaction.id, index)] && (
+                                          <div className="space-y-2">
+                                            <Textarea
+                                              rows={4}
+                                              value={overrideReasons[getOverrideKey(transaction.id, index)] ?? ""}
+                                              onChange={(event) =>
+                                                setOverrideReasons(prev => ({
+                                                  ...prev,
+                                                  [getOverrideKey(transaction.id, index)]: event.target.value,
+                                                }))
+                                              }
+                                              placeholder="Provide the reason this transaction should pass with review."
+                                              className="min-h-[120px] w-full"
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                              Add context explaining why the transaction can proceed.
+                                            </p>
+                                          </div>
                                         )}
                                       </div>
 
